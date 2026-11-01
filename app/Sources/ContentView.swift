@@ -72,6 +72,7 @@ struct Sidebar: View {
         case .overview, .folders: return nil
         case .developer, .system: return r.rules(for: s).reduce(0) { $0 + $1.size }
         case .projects: return r.projects.reduce(0) { $0 + $1.artifactBytes }
+        case .worktrees: return r.worktrees.isEmpty ? nil : r.worktrees.reduce(0) { $0 + ($1.size ?? 0) }
         case .large: return r.largeFiles.reduce(0) { $0 + $1.size }
         }
     }
@@ -123,6 +124,7 @@ struct DetailView: View {
         case .folders: FolderBrowser(report: report)
         case .developer: RulesView(report: report, screen: .developer)
         case .projects: ProjectsView(report: report)
+        case .worktrees: WorktreesView(report: report)
         case .large: LargeFilesView(report: report)
         case .system: RulesView(report: report, screen: .system)
         }

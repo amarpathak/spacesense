@@ -16,6 +16,7 @@ struct Report: Decodable {
     let volume: Volume?
     let rules: [RuleReport]
     let projects: [Project]
+    let worktrees: [Worktree]
     let largeFiles: [LargeFile]
     let needsFullDiskAccess: [String]
     let topDirs: [PathSize]
@@ -113,6 +114,34 @@ struct Project: Decodable, Identifiable, Hashable {
     func hash(into h: inout Hasher) { h.combine(path) }
 }
 
+/// core/src/worktrees.rs
+struct Worktree: Decodable, Identifiable, Hashable {
+    enum Status: String, Decodable {
+        case prunable, locked, dirty, active, done, idle, unknown
+    }
+    var id: String { path }
+    let path: String
+    let repo: String
+    let name: String
+    let branch: String?
+    let head: String?
+    let exists: Bool
+    let locked: Bool
+    let size: UInt64?
+    let artifactBytes: UInt64
+    let lastActive: Int64?
+    let dirty: Bool?
+    let base: String?
+    let merged: Bool?
+    let upstreamGone: Bool
+    let createdBy: String?
+    let status: Status
+    let suggested: [String]?
+
+    static func == (a: Worktree, b: Worktree) -> Bool { a.path == b.path }
+    func hash(into h: inout Hasher) { h.combine(path) }
+}
+
 struct LargeFile: Decodable, Identifiable, Hashable {
     var id: String { path }
     let path: String
@@ -163,6 +192,7 @@ enum Screen: String, CaseIterable, Identifiable {
     case folders = "Folders"
     case developer = "Developer"
     case projects = "Projects"
+    case worktrees = "Worktrees"
     case large = "Large Files"
     case system = "Apps & System"
     var id: String { rawValue }
@@ -173,6 +203,7 @@ enum Screen: String, CaseIterable, Identifiable {
         case .folders: return "folder"
         case .developer: return "hammer"
         case .projects: return "folder.badge.gearshape"
+        case .worktrees: return "arrow.triangle.branch"
         case .large: return "doc.zipper"
         case .system: return "gearshape.2"
         }
