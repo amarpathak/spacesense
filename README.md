@@ -20,7 +20,7 @@ or delete without explaining. SpaceSense tells you, for every folder:
 - **what deleting costs** ("re-downloads 10 GB next launch") and the exact command.
 
 On the author's 500 GB Mac it found ~100 GB to reclaim: a 24 GB Yarn cache, a 15 GB npm
-cache, 40 GB of `node_modules` in old projects, a 20 GB disk image left behind by an
+cache, 40 GB of `node_modules` across 110 projects, a 20 GB disk image left behind by an
 uninstalled Docker Desktop, and Chrome's 8.5 GB on-device AI model.
 
 ## Safety: a person is always in the loop
