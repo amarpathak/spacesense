@@ -1,0 +1,14 @@
+id = "yarn-v1-cache"
+name = "Yarn cache (v1)"
+category = "package-cache"
+paths = ["~/Library/Caches/Yarn"]
+env = "YARN_CACHE_FOLDER"
+path_cmd = ["yarn", "cache", "dir"]
+tool = "yarn"
+safety = "cache"
+official_cmd = ["yarn", "cache", "clean"]
+fallback = "delete-contents"
+comes_back = "Packages are re-downloaded the next time you run yarn install."
+explanation = "Yarn Classic stores every package version it ever installed, and never prunes old ones, so it grows without limit."
+docs_url = "https://classic.yarnpkg.com/en/docs/cli/cache"
+verified = "path and `yarn cache dir` (= Yarn/v6) seen on owner's Mac 2026-11-01"

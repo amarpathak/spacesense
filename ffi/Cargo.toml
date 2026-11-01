@@ -1,0 +1,12 @@
+[package]
+name = "spacesense-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+spacesense-core = { path = "../core" }
+serde_json = "1"

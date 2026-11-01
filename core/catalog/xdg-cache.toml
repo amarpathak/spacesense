@@ -1,0 +1,12 @@
+id = "xdg-cache"
+name = "Other ~/.cache"
+category = "app-cache"
+paths = ["~/.cache"]
+generic = true
+safety = "cache"
+fallback = "none"
+itemize = true
+comes_back = "Tools recreate their caches when needed."
+explanation = "Caches of command-line tools that follow the XDG convention."
+docs_url = ""
+verified = "per tool: no"

@@ -1,0 +1,11 @@
+id = "xcode-derived-data"
+name = "Xcode DerivedData"
+category = "xcode"
+paths = ["~/Library/Developer/Xcode/DerivedData"]
+safety = "regenerable"
+quit_apps = ["Xcode"]
+fallback = "delete-contents"
+comes_back = "Xcode rebuilds it on the next build (first build is slower)."
+explanation = "Build products, indexes and logs for every project Xcode has built."
+docs_url = "https://developer.apple.com/documentation/xcode/build-system"
+verified = "secondary sources"

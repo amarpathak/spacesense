@@ -1,0 +1,12 @@
+id = "cocoapods-cache"
+name = "CocoaPods cache"
+category = "package-cache"
+paths = ["~/Library/Caches/CocoaPods"]
+tool = "pod"
+safety = "cache"
+official_cmd = ["pod", "cache", "clean", "--all"]
+fallback = "delete-contents"
+comes_back = "Pods are re-downloaded by the next pod install."
+explanation = "Downloaded pod sources and specs."
+docs_url = "https://guides.cocoapods.org/terminal/commands.html#pod_cache_clean"
+verified = "docs"

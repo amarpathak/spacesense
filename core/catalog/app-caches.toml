@@ -1,0 +1,12 @@
+id = "app-caches"
+name = "Other app caches"
+category = "app-cache"
+paths = ["~/Library/Caches"]
+generic = true
+safety = "cache"
+fallback = "none"
+itemize = true
+comes_back = "Apps rebuild their caches as they run (they may be slower at first)."
+explanation = "Per-app caches. Each app's cache should only be cleared while that app is quit. Listed per app."
+docs_url = ""
+verified = "per app: no"

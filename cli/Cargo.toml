@@ -1,0 +1,13 @@
+[package]
+name = "spacesense"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "spacesense"
+path = "src/main.rs"
+
+[dependencies]
+spacesense-core = { path = "../core" }
+serde_json = "1"

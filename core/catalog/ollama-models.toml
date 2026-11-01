@@ -1,0 +1,12 @@
+id = "ollama-models"
+name = "Ollama models"
+category = "ai-models"
+paths = ["~/.ollama/models"]
+env = "OLLAMA_MODELS"
+tool = "ollama"
+safety = "review"
+fallback = "none"
+comes_back = "A removed model is re-downloaded (often many GB) by ollama pull."
+explanation = "Local LLM weights downloaded by Ollama. Remove individual models with ollama rm <model>."
+docs_url = "https://docs.ollama.com/faq"
+verified = "path seen on owner's Mac (empty)"

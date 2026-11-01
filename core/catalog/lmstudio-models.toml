@@ -1,0 +1,11 @@
+id = "lmstudio-models"
+name = "LM Studio models"
+category = "ai-models"
+paths = ["~/.lmstudio/models", "~/.cache/lm-studio/models"]
+quit_apps = ["LM Studio"]
+safety = "review"
+fallback = "trash"
+comes_back = "A removed model must be downloaded again in LM Studio."
+explanation = "Local model weights downloaded by LM Studio."
+docs_url = "https://lmstudio.ai/docs"
+verified = "no (LM Studio not installed on owner's Mac)"

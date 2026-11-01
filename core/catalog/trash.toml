@@ -1,0 +1,10 @@
+id = "trash"
+name = "Trash"
+category = "system"
+paths = ["~/.Trash"]
+safety = "review"
+fallback = "none"
+comes_back = "Never: emptying the Trash is permanent."
+explanation = "Files you have already moved to the Trash still take space until it is emptied."
+docs_url = ""
+verified = "needs Full Disk Access to measure from Terminal"

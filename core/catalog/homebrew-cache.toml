@@ -1,0 +1,15 @@
+id = "homebrew-cache"
+name = "Homebrew downloads"
+category = "package-cache"
+paths = ["~/Library/Caches/Homebrew"]
+env = "HOMEBREW_CACHE"
+path_cmd = ["brew", "--cache"]
+tool = "brew"
+safety = "cache"
+official_cmd = ["brew", "cleanup", "--prune=all"]
+dry_run_cmd = ["brew", "cleanup", "--prune=all", "-n"]
+fallback = "none"
+comes_back = "Downloads are fetched again only if you reinstall or upgrade."
+explanation = "Bottles and source tarballs Homebrew downloaded. Installed software is not affected."
+docs_url = "https://docs.brew.sh/Manpage#cleanup-options-formulacask-"
+verified = "docs; `brew --cache` seen on owner's Mac"

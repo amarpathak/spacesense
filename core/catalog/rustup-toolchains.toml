@@ -1,0 +1,11 @@
+id = "rustup-toolchains"
+name = "Rust toolchains"
+category = "toolchain"
+paths = ["~/.rustup/toolchains"]
+tool = "rustup"
+safety = "review"
+fallback = "none"
+comes_back = "A removed toolchain must be reinstalled with rustup toolchain install."
+explanation = "Installed Rust compilers. Keep the one you use; old nightlies can go with rustup toolchain uninstall."
+docs_url = "https://rust-lang.github.io/rustup/concepts/toolchains.html"
+verified = "path seen on owner's Mac"

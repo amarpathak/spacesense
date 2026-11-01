@@ -1,0 +1,13 @@
+id = "gradle-caches"
+name = "Gradle caches"
+category = "package-cache"
+paths = ["~/.gradle/caches"]
+env = "GRADLE_USER_HOME"
+env_suffix = "caches"
+safety = "cache"
+quit_apps = ["java"]
+fallback = "delete-contents"
+comes_back = "Dependencies are re-downloaded by the next Gradle build."
+explanation = "Gradle's dependency and build caches."
+docs_url = "https://docs.gradle.org/current/userguide/directory_layout.html"
+verified = "docs"

@@ -1,0 +1,14 @@
+id = "pnpm-store"
+name = "pnpm store"
+category = "package-cache"
+paths = ["~/Library/pnpm/store"]
+env = "PNPM_STORE_DIR"
+path_cmd = ["pnpm", "store", "path"]
+tool = "pnpm"
+safety = "cache"
+official_cmd = ["pnpm", "store", "prune"]
+fallback = "none"
+comes_back = "Only packages no project uses any more are removed."
+explanation = "pnpm keeps one copy of every package and hard-links it into projects, so the store is usually smaller than it looks. Prune removes packages no project references."
+docs_url = "https://pnpm.io/cli/store"
+verified = "docs only (pnpm not installed on owner's Mac)"

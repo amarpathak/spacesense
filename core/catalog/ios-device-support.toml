@@ -1,0 +1,10 @@
+id = "ios-device-support"
+name = "iOS DeviceSupport"
+category = "xcode"
+paths = ["~/Library/Developer/Xcode/iOS DeviceSupport"]
+safety = "review"
+fallback = "trash"
+comes_back = "Xcode re-copies symbols the next time that device and iOS version is connected."
+explanation = "Debug symbols copied from each iPhone/iPad and iOS version you've connected. Usually only the newest 2–3 are needed."
+docs_url = ""
+verified = "community"

@@ -1,0 +1,10 @@
+id = "yarn-berry-cache"
+name = "Yarn cache (Berry, global)"
+category = "package-cache"
+paths = ["~/.yarn/berry"]
+safety = "cache"
+fallback = "delete-contents"
+comes_back = "Packages are re-downloaded by the next yarn install in a Yarn 2+ project."
+explanation = "Yarn 2+ (Berry) keeps a global cache of package zips when enableGlobalCache is on (the default since Yarn 4)."
+docs_url = "https://yarnpkg.com/configuration/yarnrc#enableGlobalCache"
+verified = "path seen on owner's Mac; `yarn cache clean` only works inside a Berry project, so no official command"

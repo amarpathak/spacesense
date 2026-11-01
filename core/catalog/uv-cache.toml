@@ -1,0 +1,13 @@
+id = "uv-cache"
+name = "uv cache"
+category = "package-cache"
+paths = ["~/.cache/uv"]
+env = "UV_CACHE_DIR"
+tool = "uv"
+safety = "cache"
+official_cmd = ["uv", "cache", "clean"]
+fallback = "delete-contents"
+comes_back = "Packages are re-downloaded by the next uv sync / pip install."
+explanation = "uv's package cache. uv hard-links or clones from it into virtualenvs, so part of this space may be shared."
+docs_url = "https://docs.astral.sh/uv/concepts/cache/"
+verified = "`uv cache dir` seen on owner's Mac"

@@ -1,0 +1,12 @@
+id = "claude-vm"
+name = "Claude desktop VM"
+category = "app-data"
+paths = ["~/Library/Application Support/Claude/vm_bundles"]
+quit_apps = ["Claude"]
+safety = "review"
+fallback = "trash"
+details = ["claudevm.bundle/rootfs.img", "claudevm.bundle/sessiondata.img"]
+comes_back = "The ~10 GB Linux image is re-downloaded when you next use agent mode / Cowork. Deleting sessiondata.img loses Cowork history."
+explanation = "A Linux virtual machine that the Claude desktop app uses for local agent mode and Cowork. Quit Claude before removing it."
+docs_url = "https://github.com/anthropics/claude-code/issues/65577"
+verified = "GitHub issues only; path seen on owner's Mac"

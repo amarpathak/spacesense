@@ -1,0 +1,11 @@
+id = "tm-snapshots"
+name = "Local Time Machine snapshots"
+category = "system"
+paths = []
+special = "tm-snapshots"
+safety = "review"
+fallback = "none"
+comes_back = "Time Machine makes new ones hourly while backups are on."
+explanation = "Snapshots macOS keeps on the internal disk between Time Machine backups. macOS deletes them itself when space runs low; their size can't be measured per snapshot."
+docs_url = "https://eclecticlight.co/2020/01/22/time-machine-11-tmutil/"
+verified = "tmutil syntax"

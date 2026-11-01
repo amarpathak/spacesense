@@ -1,0 +1,12 @@
+22:58  up 3 days, 16:50, 9 users, load averages: 21.65 11.97 8.07
+root: /Users/amarpathak   (12 CPUs, 26.5.2)
+spacesense (bulk)         26.78s   269528396
+spacesense (stat)         47.96s   269526092
+du -skx                  185.28s   269500348	/Users/amarpathak
+diskus                    26.27s   275970371584
+dust -d0 -x               43.54s   257Gi ┌── amarpathak
+
+second pass (spacesense only):
+269521492 real 29.65 user 5.65 sys 223.16 
+269521504 real 29.48 user 5.54 sys 220.64 
+23:05  up 3 days, 16:57, 9 users, load averages: 20.43 18.64 12.20

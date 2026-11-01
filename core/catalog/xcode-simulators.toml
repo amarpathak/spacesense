@@ -1,0 +1,12 @@
+id = "xcode-simulators"
+name = "iOS Simulators"
+category = "xcode"
+paths = ["~/Library/Developer/CoreSimulator"]
+tool = "xcrun"
+safety = "regenerable"
+official_cmd = ["xcrun", "simctl", "delete", "unavailable"]
+fallback = "none"
+comes_back = "Only simulators for runtimes no longer installed are removed."
+explanation = "Simulator devices and their data. Devices for SDKs you no longer have are dead weight."
+docs_url = "https://developer.apple.com/documentation/xcode/running-your-app-in-simulator-or-on-a-device"
+verified = "secondary sources"

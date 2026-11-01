@@ -1,0 +1,10 @@
+id = "ios-backups"
+name = "iPhone/iPad backups"
+category = "system"
+paths = ["~/Library/Application Support/MobileSync/Backup"]
+safety = "never_auto"
+fallback = "none"
+comes_back = "Never: a backup may be the only copy of a device's data."
+explanation = "Local Finder backups of iPhones and iPads. Manage them in Finder → your device → Manage Backups. SpaceSense only shows their size."
+docs_url = ""
+verified = "path seen on owner's Mac; needs Full Disk Access"

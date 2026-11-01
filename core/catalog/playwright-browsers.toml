@@ -1,0 +1,11 @@
+id = "playwright-browsers"
+name = "Playwright browsers"
+category = "browser-runtime"
+paths = ["~/Library/Caches/ms-playwright"]
+env = "PLAYWRIGHT_BROWSERS_PATH"
+safety = "regenerable"
+fallback = "delete-contents"
+comes_back = "Browsers are re-downloaded by npx playwright install."
+explanation = "Chromium, Firefox and WebKit builds downloaded for Playwright tests, one set per Playwright version."
+docs_url = "https://playwright.dev/docs/browsers#managing-browser-binaries"
+verified = "path seen on owner's Mac"

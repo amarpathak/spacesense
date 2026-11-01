@@ -1,0 +1,14 @@
+id = "go-modcache"
+name = "Go module cache"
+category = "package-cache"
+paths = ["~/go/pkg/mod"]
+env = "GOMODCACHE"
+path_cmd = ["go", "env", "GOMODCACHE"]
+tool = "go"
+safety = "cache"
+official_cmd = ["go", "clean", "-modcache"]
+fallback = "none"
+comes_back = "Modules are re-downloaded by the next go build."
+explanation = "Downloaded Go modules (read-only files, which is why plain rm fails)."
+docs_url = "https://go.dev/ref/mod#module-cache"
+verified = "`go env GOMODCACHE` seen on owner's Mac"

@@ -1,0 +1,10 @@
+id = "logs"
+name = "Logs"
+category = "system"
+paths = ["~/Library/Logs"]
+safety = "cache"
+fallback = "none"
+comes_back = "Apps write new logs as they run."
+explanation = "Diagnostic logs written by apps and macOS. Old ones (over 30 days) are rarely needed."
+docs_url = ""
+verified = "path seen on owner's Mac"

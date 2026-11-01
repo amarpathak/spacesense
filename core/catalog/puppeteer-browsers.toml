@@ -1,0 +1,11 @@
+id = "puppeteer-browsers"
+name = "Puppeteer browsers"
+category = "browser-runtime"
+paths = ["~/.cache/puppeteer"]
+env = "PUPPETEER_CACHE_DIR"
+safety = "regenerable"
+fallback = "delete-contents"
+comes_back = "Chrome for Testing is re-downloaded when Puppeteer is next installed."
+explanation = "Chrome builds downloaded by Puppeteer."
+docs_url = "https://pptr.dev/guides/configuration"
+verified = "path seen on owner's Mac"

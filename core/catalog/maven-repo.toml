@@ -1,0 +1,10 @@
+id = "maven-repo"
+name = "Maven local repository"
+category = "package-cache"
+paths = ["~/.m2/repository"]
+safety = "cache"
+fallback = "delete-contents"
+comes_back = "Dependencies are re-downloaded by the next Maven build. Locally installed (mvn install) artifacts are lost."
+explanation = "Downloaded Maven dependencies, plus anything you installed locally with mvn install."
+docs_url = "https://maven.apache.org/guides/introduction/introduction-to-repositories.html"
+verified = "docs"

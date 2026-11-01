@@ -1,0 +1,13 @@
+id = "bun-cache"
+name = "Bun install cache"
+category = "package-cache"
+paths = ["~/.bun/install/cache"]
+env = "BUN_INSTALL_CACHE_DIR"
+tool = "bun"
+safety = "cache"
+official_cmd = ["bun", "pm", "cache", "rm"]
+fallback = "delete-contents"
+comes_back = "Packages are re-downloaded by the next bun install."
+explanation = "Bun's global package cache, shared by all projects."
+docs_url = "https://bun.sh/docs/install/cache"
+verified = "path seen on owner's Mac; `bun pm cache` needs a package.json in the cwd"

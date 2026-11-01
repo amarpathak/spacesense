@@ -1,0 +1,12 @@
+id = "nvm-versions"
+name = "Node versions (nvm)"
+category = "toolchain"
+paths = ["~/.nvm/versions/node"]
+env = "NVM_DIR"
+env_suffix = "versions/node"
+safety = "review"
+fallback = "none"
+comes_back = "A removed version must be reinstalled with nvm install (global packages too)."
+explanation = "Every Node.js version installed by nvm, each with its own global packages. Old ones can go with nvm uninstall."
+docs_url = "https://github.com/nvm-sh/nvm#usage"
+verified = "path seen on owner's Mac"

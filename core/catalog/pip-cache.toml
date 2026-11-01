@@ -1,0 +1,13 @@
+id = "pip-cache"
+name = "pip cache"
+category = "package-cache"
+paths = ["~/Library/Caches/pip"]
+env = "PIP_CACHE_DIR"
+tool = "pip3"
+safety = "cache"
+official_cmd = ["pip3", "cache", "purge"]
+fallback = "delete-contents"
+comes_back = "Wheels are re-downloaded on the next pip install."
+explanation = "Downloaded and built Python wheels."
+docs_url = "https://pip.pypa.io/en/stable/cli/pip_cache/"
+verified = "`pip3 cache dir` seen on owner's Mac"

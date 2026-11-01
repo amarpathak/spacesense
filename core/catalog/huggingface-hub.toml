@@ -1,0 +1,14 @@
+id = "huggingface-hub"
+name = "Hugging Face cache"
+category = "ai-models"
+paths = ["~/.cache/huggingface/hub"]
+env = "HF_HUB_CACHE"
+tool = "hf"
+safety = "review"
+official_cmd = ["hf", "cache", "prune"]
+dry_run_cmd = ["hf", "cache", "prune", "--dry-run"]
+fallback = "none"
+comes_back = "Models and datasets are re-downloaded the next time code loads them."
+explanation = "Models and datasets downloaded by transformers, diffusers and other Hugging Face libraries."
+docs_url = "https://huggingface.co/docs/huggingface_hub/guides/manage-cache"
+verified = "path seen on owner's Mac"

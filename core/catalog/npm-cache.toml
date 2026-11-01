@@ -1,0 +1,15 @@
+id = "npm-cache"
+name = "npm cache"
+category = "package-cache"
+paths = ["~/.npm"]
+env = "npm_config_cache"
+path_cmd = ["npm", "config", "get", "cache"]
+tool = "npm"
+safety = "cache"
+official_cmd = ["npm", "cache", "clean", "--force"]
+fallback = "delete-contents"
+details = ["_cacache", "_npx", "_logs"]
+comes_back = "Packages are re-downloaded the next time you run npm install or npx."
+explanation = "npm keeps a copy of every package it has downloaded (_cacache) and of every tool you ran with npx (_npx). Your projects keep their own node_modules, so clearing this only costs download time."
+docs_url = "https://docs.npmjs.com/cli/commands/npm-cache"
+verified = "docs; path seen on owner's Mac 2026-11-01"

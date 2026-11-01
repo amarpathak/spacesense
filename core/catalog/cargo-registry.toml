@@ -1,0 +1,12 @@
+id = "cargo-registry"
+name = "Cargo registry cache"
+category = "package-cache"
+paths = ["~/.cargo/registry"]
+env = "CARGO_HOME"
+env_suffix = "registry"
+safety = "cache"
+fallback = "delete-contents"
+comes_back = "Crates are re-downloaded by the next cargo build."
+explanation = "Downloaded crate archives and their unpacked sources. Your installed cargo tools (in ~/.cargo/bin) are not affected."
+docs_url = "https://doc.rust-lang.org/cargo/guide/cargo-home.html"
+verified = "path seen on owner's Mac"

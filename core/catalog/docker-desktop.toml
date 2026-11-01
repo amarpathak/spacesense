@@ -1,0 +1,16 @@
+id = "docker-desktop"
+name = "Docker Desktop disk image"
+category = "docker"
+paths = ["~/Library/Containers/com.docker.docker"]
+tool = "docker"
+tool_paths = ["/Applications/Docker.app/Contents/Resources/bin/docker", "/usr/local/bin/docker"]
+app_bundle = "/Applications/Docker.app"
+safety = "review"
+official_cmd = ["docker", "system", "prune"]
+fallback = "none"
+leftover_fallback = "trash"
+comes_back = "Pruned images and build cache are rebuilt or re-pulled when needed. Named volumes are never pruned automatically."
+explanation = "Docker Desktop keeps all images, containers, volumes and build cache inside one virtual disk (Docker.raw). It is sparse: measured here by real allocation, not its logical size. Pruning frees space inside it; Docker Desktop then gives the space back to macOS."
+leftover_explanation = "Docker Desktop is no longer installed, but its virtual disk with all images, containers and volumes is still here. If you don't need any of them, moving this folder to the Trash frees the space."
+docs_url = "https://docs.docker.com/engine/manage-resources/pruning/"
+verified = "path seen on owner's Mac (Docker.app not installed: leftover data)"

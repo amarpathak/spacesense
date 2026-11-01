@@ -1,0 +1,10 @@
+id = "xcode-archives"
+name = "Xcode Archives"
+category = "xcode"
+paths = ["~/Library/Developer/Xcode/Archives"]
+safety = "never_auto"
+fallback = "none"
+comes_back = "Never: archives are the builds you shipped, with their debug symbols."
+explanation = "Archived app builds. Needed to symbolicate crash reports of released versions. SpaceSense only shows their size."
+docs_url = ""
+verified = "n/a"
