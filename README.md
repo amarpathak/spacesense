@@ -25,6 +25,15 @@ worktrees.
 
 ## Install
 
+With Homebrew (installs the app and the `spacesense` CLI):
+
+```sh
+brew trust amarpathak/tap
+brew install --cask amarpathak/tap/spacesense
+```
+
+Or by hand:
+
 1. Download `SpaceSense-<version>.dmg` from [Releases](https://github.com/amarpathak/spacesense/releases)
    and drag SpaceSense to Applications.
 2. The app isn't notarized by Apple yet, so the first launch shows *"Apple could not
