@@ -125,7 +125,7 @@ enum Snapshotter {
         var steps: [(String, () -> Void)] = Screen.allCases.map { s in
             (s.rawValue, { model.screen = s })
         }
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let home = ProcessInfo.processInfo.environment["HOME"] ?? NSHomeDirectory()
         for sub in ["Library", "Library/Containers", "Library/Application Support", "Library/Caches"] {
             steps.append(("Folders " + sub.replacingOccurrences(of: "/", with: "-"), { model.browse(home + "/" + sub) }))
         }

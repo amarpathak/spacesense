@@ -36,7 +36,7 @@ struct ProjectRow: Identifiable {
             status = "Recent"
             statusRank = 1
         } else {
-            status = "Stale, preselected"
+            status = "Stale, suggested"
             statusRank = 2
         }
     }
@@ -127,7 +127,7 @@ struct ProjectsView: View {
                 }
                 .disabled(cleanable.isEmpty)
             }
-            Text("Active in the last 14 days: never preselected. Build folders that git doesn't ignore are never cleaned. Uncommitted changes aren't affected by removing git-ignored folders.")
+            Text("Active in the last 14 days: protected, never cleaned. Stale (30+ days): suggested, never selected for you. Build folders that git doesn't ignore are never cleaned. Uncommitted changes aren't affected by removing git-ignored folders.")
                 .font(.caption).foregroundColor(.secondary)
         }
         .padding(24)

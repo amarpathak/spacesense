@@ -7,6 +7,21 @@ worktrees.
 
 > Status: early (v0.1). Universal (Apple Silicon + Intel), macOS 13 or later.
 
+![SpaceSense overview: disk bar, what could be freed, and what is using space](docs/screenshots/overview.png)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/folders.png" alt="Folders: each app's data with its size, owner app and a verdict"><br><sub><b>Folders</b>: every folder with its owning app and a verdict: Cache, Rebuilds, Review or Don't delete.</sub></td>
+<td width="50%"><img src="docs/screenshots/developer.png" alt="Developer caches with explanations and the exact cleanup command"><br><sub><b>Developer</b>: package caches, Docker, toolchains, AI models, each with what it is, whether it comes back, and the official command.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/projects.png" alt="Projects with build folders, last active date and git state"><br><sub><b>Projects</b>: node_modules, target/, .venv… per project, with last activity and git state. Active projects are protected.</sub></td>
+<td width="50%"><img src="docs/screenshots/review.png" alt="Review screen listing the exact steps before cleaning"><br><sub><b>Review</b>: nothing runs until you've seen every exact step and confirmed.</sub></td>
+</tr>
+</table>
+
+<sub>Screenshots use a demo home folder (<code>docs/demo-home.sh</code>), not a real one.</sub>
+
 ## Install
 
 1. Download `SpaceSense-<version>.dmg` from [Releases](https://github.com/amarpathak/spacesense/releases)
