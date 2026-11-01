@@ -306,6 +306,28 @@ fn print_report(r: &Report, all: bool) {
         }
     );
 
+    if !r.system_data.is_empty() {
+        let measured: u64 = r.system_data.iter().filter_map(|p| p.size).sum();
+        println!("WHAT'S IN \"SYSTEM DATA\" (≈ {} measured; Apple's own number is computed differently)", human(measured));
+        for p in &r.system_data {
+            let size = p.size.map(human).unwrap_or_else(|| "-".into());
+            let tag = if p.managed_by_macos { "  [managed by macOS]" } else { "" };
+            let loc = match p.paths.as_slice() {
+                [one] => tilde(one, h),
+                [] => String::new(),
+                many => format!("{} folders", many.len()),
+            };
+            println!("{:>10}  {:<36} {}{}", size, p.name, loc, tag);
+            if let Some(n) = &p.note {
+                println!("{:>10}  {}", "", n);
+            }
+            for t in p.top.iter().filter(|t| t.size >= 500_000_000).take(3) {
+                println!("{:>10}    {:>9}  {}", "", human(t.size), tilde(&t.path, h));
+            }
+        }
+        println!();
+    }
+
     println!("CACHES, TOOLS & APP DATA");
     for x in r
         .rules

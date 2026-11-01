@@ -18,7 +18,7 @@ struct OverviewView: View {
                 Text("What's using space").font(.title2.weight(.semibold))
                 CategoryGrid(report: report)
                 HomeBreakdown(report: report)
-                SystemDataExplainer()
+                SystemDataCard(report: report)
             }
             .padding(24)
             .frame(maxWidth: 1000, alignment: .leading)
@@ -244,20 +244,108 @@ struct HomeBreakdown: View {
     }
 }
 
-struct SystemDataExplainer: View {
-    @State private var open = false
-    var body: some View {
-        DisclosureGroup(isExpanded: $open) {
-            Text("""
-            In System Settings → Storage, macOS lumps caches, logs, app support data, virtual machine disks, swap and temporary files, local Time Machine snapshots and iPhone backups into one grey "System Data" bar, and offers no way to manage it.
+struct SystemDataCard: View {
+    @EnvironmentObject var model: AppModel
+    let report: Report
+    @State private var expanded: Set<String> = []
 
-            SpaceSense breaks that bar into named pieces: the caches on the Developer and Apps & System screens are most of it on a developer's Mac. The rest (swap, sleep image, macOS updates) lives on macOS's own volumes and is managed by macOS.
-            """)
-            .foregroundColor(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
-            .padding(.top, 6)
-        } label: {
-            Text("What is “System Data”?").font(.headline)
+    var body: some View {
+        let parts = report.systemData
+        let total = parts.reduce(0) { $0 + ($1.size ?? 0) }
+        let maxSize = Double(parts.compactMap(\.size).max() ?? 1)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("What's in “System Data”").font(.title2.weight(.semibold))
+                Spacer()
+                Text("≈ \(Fmt.size(total)) measured").foregroundColor(.secondary)
+            }
+            Text("System Settings → Storage shows one grey “System Data” bar you can't open. These are the pieces it's made of on this Mac. Apple doesn't publish its formula, so its number won't match exactly.")
+                .font(.callout).foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Card {
+                VStack(spacing: 4) {
+                    ForEach(parts) { p in
+                        row(p, maxSize: maxSize)
+                        if p.id != parts.last?.id { Divider() }
+                    }
+                }
+            }
+        }
+    }
+
+    private func toggle(_ id: String) {
+        if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
+    }
+
+    /// Inside the scanned folder the folder browser can show it; otherwise Finder.
+    private func open(_ path: String) {
+        if path == report.root || path.hasPrefix(report.root + "/") { model.browse(path) } else { Actions.reveal(path) }
+    }
+
+    @ViewBuilder private func row(_ p: SystemPart, maxSize: Double) -> some View {
+        let isOpen = expanded.contains(p.id)
+        VStack(alignment: .leading, spacing: 8) {
+            Button { toggle(p.id) } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "chevron.right")
+                        .rotationEffect(.degrees(isOpen ? 90 : 0))
+                        .foregroundColor(.secondary).frame(width: 12)
+                    Text(p.name).frame(width: 260, alignment: .leading).lineLimit(1)
+                    if p.managedByMacos {
+                        Chip(text: "managed by macOS", color: .secondary, symbol: "gearshape")
+                    }
+                    Meter(fraction: Double(p.size ?? 0) / maxSize, color: p.managedByMacos ? .gray : .accentColor)
+                    Group {
+                        if let s = p.size { SizeText(bytes: s) } else { Text("–").foregroundColor(.secondary) }
+                    }
+                    .frame(width: 80, alignment: .trailing)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            if isOpen {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(p.explanation).font(.callout).foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let n = p.note { Text(n).font(.callout) }
+                    ForEach(p.top ?? [], id: \.path) { t in
+                        Button { open(t.path) } label: {
+                            HStack {
+                                Text(report.tilde(t.path)).lineLimit(1).truncationMode(.middle)
+                                Spacer()
+                                SizeText(bytes: t.size, font: .callout).foregroundColor(.secondary)
+                                Image(systemName: "chevron.right").font(.caption).foregroundColor(.secondary)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .font(.callout)
+                    }
+                    HStack(spacing: 14) {
+                        if let s = p.screen.flatMap(screen(for:)) {
+                            Button("See what's cleanable in \(s.rawValue)") { model.screen = s }.buttonStyle(.link)
+                        }
+                        if p.paths.count == 1, let path = p.paths.first {
+                            Button(p.screen == "folders" ? "Browse folder" : "Show in Finder") {
+                                p.screen == "folders" ? open(path) : Actions.reveal(path)
+                            }
+                            .buttonStyle(.link)
+                        }
+                    }
+                    .font(.callout)
+                }
+                .padding(.leading, 24)
+                .padding(.bottom, 6)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func screen(for id: String) -> Screen? {
+        switch id {
+        case "developer": return .developer
+        case "system": return .system
+        default: return nil
         }
     }
 }

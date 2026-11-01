@@ -106,7 +106,9 @@ struct WorktreesView: View {
                     if r.wt.size != nil { SizeText(bytes: r.size) } else { Text("–").foregroundColor(.secondary) }
                 }
                 .width(min: 64, ideal: 72)
-                TableColumn("Build folders", value: \.builds) { r in SizeText(bytes: r.builds).foregroundColor(.secondary) }
+                TableColumn("Build folders", value: \.builds) { r in
+                    if r.builds > 0 { SizeText(bytes: r.builds).foregroundColor(.secondary) } else { Text("–").foregroundColor(.secondary) }
+                }
                     .width(min: 70, ideal: 90)
                 TableColumn("Last active", value: \.days) { r in
                     Text(r.days == Int64.max ? "–" : Fmt.age(days: r.days))

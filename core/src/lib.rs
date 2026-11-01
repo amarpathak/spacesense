@@ -15,6 +15,7 @@ pub mod plan;
 pub mod projects;
 pub mod report;
 pub mod safety;
+pub mod system_data;
 pub mod trash;
 pub mod worktrees;
 

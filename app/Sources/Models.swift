@@ -17,6 +17,7 @@ struct Report: Decodable {
     let rules: [RuleReport]
     let projects: [Project]
     let worktrees: [Worktree]
+    let systemData: [SystemPart]
     let largeFiles: [LargeFile]
     let needsFullDiskAccess: [String]
     let topDirs: [PathSize]
@@ -112,6 +113,23 @@ struct Project: Decodable, Identifiable, Hashable {
 
     static func == (a: Project, b: Project) -> Bool { a.path == b.path }
     func hash(into h: inout Hasher) { h.combine(path) }
+}
+
+/// core/src/system_data.rs: one named piece of macOS's "System Data".
+struct SystemPart: Decodable, Identifiable {
+    struct Item: Decodable, Hashable {
+        let path: String
+        let size: UInt64
+    }
+    let id: String
+    let name: String
+    let explanation: String
+    let size: UInt64?
+    let paths: [String]
+    let managedByMacos: Bool
+    let screen: String?
+    let note: String?
+    let top: [Item]?
 }
 
 /// core/src/worktrees.rs

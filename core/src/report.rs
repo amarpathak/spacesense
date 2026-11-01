@@ -21,6 +21,8 @@ pub struct Report {
     pub projects: Vec<Project>,
     /// Linked git worktrees of the repositories found (crate::worktrees).
     pub worktrees: Vec<crate::worktrees::Worktree>,
+    /// What macOS's "System Data" bar is made of (crate::system_data).
+    pub system_data: Vec<crate::system_data::SystemPart>,
     pub large_files: Vec<LargeFileReport>,
     /// Locations that couldn't be read (EPERM): need Full Disk Access.
     pub needs_full_disk_access: Vec<PathBuf>,
@@ -447,6 +449,51 @@ pub fn build(root: &Path, opts: &ReportOptions) -> io::Result<Report> {
     );
     large_files.sort_by_key(|x| std::cmp::Reverse(x.size));
 
+    set_phase(crate::PHASE_MEASURING);
+    let hidden = (root == home).then(|| {
+        result
+            .tree
+            .children
+            .iter()
+            .filter(|c| c.name.starts_with('.') && c.name != ".Trash")
+            .map(|c| (root.join(&c.name), c.size))
+            .collect()
+    });
+    let mut system_data = crate::system_data::build(
+        &home,
+        hidden,
+        &mut |p| size_of.path(p).size,
+        &|p| {
+            use std::os::unix::ffi::OsStrExt;
+            let c = std::ffi::CString::new(p.as_os_str().as_bytes()).ok()?;
+            volume_space_used(&c)
+        },
+        tm_snapshot_count(),
+    );
+    // Biggest folders of each part, where the scan has them. Folders that are
+    // parts of their own (MobileSync inside Application Support) are left out.
+    let part_paths: Vec<PathBuf> = system_data.iter().flat_map(|p| p.paths.clone()).collect();
+    for part in &mut system_data {
+        let mut top: Vec<crate::system_data::TopItem> = if part.id == "hidden-tools" {
+            // The parts are the hidden folders themselves (~/.npm, ~/.cache...).
+            part.paths
+                .iter()
+                .map(|p| crate::system_data::TopItem { path: p.clone(), size: size_of.cached(p) })
+                .collect()
+        } else {
+            part.paths
+                .iter()
+                .filter_map(|p| Some((p, result.tree.find(p.strip_prefix(&root).ok()?)?)))
+                .flat_map(|(p, n)| n.children.iter().map(move |c| (p.join(&c.name), c.size)))
+                .filter(|(p, _)| !part_paths.contains(p))
+                .map(|(path, size)| crate::system_data::TopItem { path, size })
+                .collect()
+        };
+        top.sort_by_key(|t| std::cmp::Reverse(t.size));
+        top.truncate(5);
+        part.top = top;
+    }
+
     let mut needs_fda = Vec::new();
     collect_eperm(&result.tree, &root, &mut needs_fda);
 
@@ -465,6 +512,7 @@ pub fn build(root: &Path, opts: &ReportOptions) -> io::Result<Report> {
         rules: reports,
         projects,
         worktrees,
+        system_data,
         large_files,
         needs_full_disk_access: needs_fda,
         top_dirs: {
