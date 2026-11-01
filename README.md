@@ -1,6 +1,7 @@
 # SpaceSense
 
 **A free, open-source Mac app that explains what is filling your disk, and cleans it safely.**
+[Website & guides](https://amarpathak.github.io/spacesense/) · [Download](https://github.com/amarpathak/spacesense/releases/latest)
 Built for developers: it knows `node_modules`, npm / Yarn / pnpm / Bun caches, Docker,
 Xcode, Homebrew, Cargo, pip / uv, AI models, Playwright and Puppeteer browsers, and git
 worktrees.

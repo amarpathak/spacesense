@@ -2,3 +2,4 @@
 /app/build
 .DS_Store
 /dist
+/site/out
