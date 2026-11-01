@@ -1,0 +1,23 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, macos-15-intel]   # Apple Silicon and Intel
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rust targets
+        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+      - name: Tests (fixtures only; nothing outside temp dirs is touched)
+        run: cargo test --release
+      - name: Build universal app and CLI
+        run: app/build.sh
+      - name: CLI smoke test
+        run: |
+          app/build/spacesense scan "$HOME" --top 3
+          app/build/spacesense clean --dry-run > /dev/null

@@ -5,8 +5,18 @@ Built for developers: it knows `node_modules`, npm / Yarn / pnpm / Bun caches, D
 Xcode, Homebrew, Cargo, pip / uv, AI models, Playwright and Puppeteer browsers, and git
 worktrees.
 
-> Status: early (v0.0.1). Works on the author's Mac (Intel, macOS 26). Universal builds
-> and signed releases are next.
+> Status: early (v0.1). Universal (Apple Silicon + Intel), macOS 13 or later.
+
+## Install
+
+1. Download `SpaceSense-<version>.dmg` from [Releases](https://github.com/amarpathak/spacesense/releases)
+   and drag SpaceSense to Applications.
+2. The app isn't notarized by Apple yet, so the first launch shows *"Apple could not
+   verify SpaceSense…"*. Click **Done**, open **System Settings → Privacy & Security**,
+   scroll down and click **Open Anyway** next to SpaceSense. You only do this once.
+3. Optional: give it **Full Disk Access** (System Settings → Privacy & Security → Full
+   Disk Access → **+** → SpaceSense) so it can also measure the Trash, Mail, Safari and
+   backups. Without it, those just aren't counted.
 
 ## Why
 
