@@ -31,6 +31,10 @@ done
 lipo -create $BINS -output "$APP/Contents/MacOS/SpaceSense"
 lipo -create $CLIS -output app/build/spacesense
 cp packaging/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+# The CLI ships inside the app too (Homebrew links it as `spacesense`).
+mkdir -p "$APP/Contents/Helpers"
+codesign --force -s - app/build/spacesense
+cp app/build/spacesense "$APP/Contents/Helpers/spacesense"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -52,6 +56,5 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 PLIST
 # Ad-hoc signature (Apple Silicon refuses unsigned code). macOS privacy grants
 # (Full Disk Access) reset on every rebuild until a Developer ID signature.
-codesign --force -s - app/build/spacesense
 codesign --force -s - "$APP"
 echo "built $APP and app/build/spacesense ($VERSION: $(lipo -archs "$APP/Contents/MacOS/SpaceSense"))"
