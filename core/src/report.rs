@@ -19,6 +19,8 @@ pub struct Report {
     pub volume: Option<Volume>,
     pub rules: Vec<RuleReport>,
     pub projects: Vec<Project>,
+    /// Linked git worktrees of the repositories found (crate::worktrees).
+    pub worktrees: Vec<crate::worktrees::Worktree>,
     pub large_files: Vec<LargeFileReport>,
     /// Locations that couldn't be read (EPERM): need Full Disk Access.
     pub needs_full_disk_access: Vec<PathBuf>,
@@ -420,12 +422,14 @@ pub fn build(root: &Path, opts: &ReportOptions) -> io::Result<Report> {
             .flat_map(|r| r.paths.iter().map(|p| p.path.clone())),
     );
     let mut projects = projects::detect(&result.tree, &root, &excluded);
+    let git = if opts.git { tools.find("git", &[]) } else { None };
     if opts.git {
         set_phase(crate::PHASE_GIT);
-        let git = tools.find("git", &[]);
         projects::fill_git(&mut projects, git.as_deref());
     }
     projects.sort_by_key(|x| std::cmp::Reverse(x.artifact_bytes));
+    let worktrees =
+        crate::worktrees::detect(&result.tree, &root, &projects, git.as_deref(), now());
 
     let mut large_files = Vec::new();
     let mut large_excluded = excluded.clone();
@@ -460,6 +464,7 @@ pub fn build(root: &Path, opts: &ReportOptions) -> io::Result<Report> {
         volume: volume(&root),
         rules: reports,
         projects,
+        worktrees,
         large_files,
         needs_full_disk_access: needs_fda,
         top_dirs: {

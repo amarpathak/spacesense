@@ -15,6 +15,7 @@ const USAGE: &str = "\
 usage:
   spacesense scan   [PATH] [--json] [--top N] [--depth N] [--kib] [--progress]
   spacesense report [PATH] [--json [--plan]] [--no-git] [--all]
+  spacesense worktrees [PATH] [--json]
   spacesense clean  --dry-run [TARGET...] [--json] [--include-active]
   spacesense clean  TARGET... [--include-active]
 
@@ -23,6 +24,9 @@ PATH defaults to your home folder.
 report   what is using space: caches and tools (catalog rules), project build
          artifacts (node_modules, target/, ...), large files. --all also lists
          rules that found nothing.
+worktrees  every linked git worktree of the repositories found: size, build
+         folders, branch, and whether it still holds work. Read-only: it
+         prints the git command that would remove it, never runs it.
 clean    --dry-run prints what would be cleaned without changing anything; with
          no TARGET it shows suggestions (caches, regenerable data, projects
          untouched for 30+ days). Without --dry-run it cleans only the TARGETs
@@ -57,7 +61,7 @@ struct Args {
 
 fn parse(mut it: impl Iterator<Item = String>) -> Result<Args, String> {
     let cmd = match it.next().as_deref() {
-        Some(c @ ("scan" | "report" | "clean")) => c.to_string(),
+        Some(c @ ("scan" | "report" | "worktrees" | "clean")) => c.to_string(),
         Some("-h" | "--help") | None => return Err(String::new()),
         Some(other) => return Err(format!("unknown command {other:?}")),
     };
@@ -170,6 +174,17 @@ fn main() -> ExitCode {
                     println!("{}", serde_json::to_string_pretty(&r).unwrap());
                 } else {
                     print_report(&r, args.all);
+                }
+                ExitCode::SUCCESS
+            }
+            Err(c) => c,
+        },
+        "worktrees" => match build_report(&args, root) {
+            Ok(r) => {
+                if args.json {
+                    println!("{}", serde_json::to_string_pretty(&r.worktrees).unwrap());
+                } else {
+                    print_worktrees(&r);
                 }
                 ExitCode::SUCCESS
             }
@@ -403,6 +418,84 @@ fn print_report(r: &Report, all: bool) {
             tilde(&f.path, h)
         );
     }
+}
+
+fn print_worktrees(r: &Report) {
+    use spacesense_core::worktrees::Status;
+    let h = &r.home;
+    let w = &r.worktrees;
+    if w.is_empty() {
+        println!("No linked git worktrees found.");
+        return;
+    }
+    let total: u64 = w.iter().filter_map(|x| x.size).sum();
+    let arts: u64 = w.iter().map(|x| x.artifact_bytes).sum();
+    let repos: std::collections::HashSet<_> = w.iter().map(|x| &x.repo).collect();
+    println!(
+        "GIT WORKTREES: {} in {} worktrees of {} repositories ({} of it build folders)\n",
+        human(total),
+        w.len(),
+        repos.len(),
+        human(arts)
+    );
+    let label = |s: Status| match s {
+        Status::Prunable => "prunable",
+        Status::Locked => "locked",
+        Status::Dirty => "dirty",
+        Status::Active => "active",
+        Status::Done => "done",
+        Status::Idle => "idle",
+        Status::Unknown => "unknown",
+    };
+    for x in w {
+        let days = x
+            .last_active
+            .map(|t| format!("{}d", (r.generated_at - t) / 86_400))
+            .unwrap_or_else(|| "-".into());
+        let branch = x
+            .branch
+            .clone()
+            .or_else(|| x.head.as_ref().map(|h| format!("detached {h}")))
+            .unwrap_or_else(|| "?".into());
+        let mut why = Vec::new();
+        if x.merged == Some(true) {
+            why.push(format!("merged into {}", x.base.as_deref().unwrap_or("base")));
+        }
+        if x.upstream_gone {
+            why.push("upstream branch deleted".into());
+        }
+        if x.status == Status::Idle {
+            why.push(format!(
+                "has commits not in {}",
+                x.base.as_deref().unwrap_or("base")
+            ));
+        }
+        if let Some(c) = x.created_by {
+            why.push(format!("made by {c}"));
+        }
+        println!(
+            "{:>10}  {:<9} {:>5}  {}  [{}]",
+            x.size.map(human).unwrap_or_else(|| "-".into()),
+            label(x.status),
+            days,
+            tilde(&x.path, h),
+            branch
+        );
+        let mut info = format!("of {}", tilde(&x.repo, h));
+        if x.artifact_bytes > 0 {
+            info += &format!(" · build folders {}", human(x.artifact_bytes));
+        }
+        if !why.is_empty() {
+            info += &format!(" · {}", why.join(", "));
+        }
+        println!("{:>10}  {info}", "");
+        if let Some(cmd) = &x.suggested {
+            println!("{:>10}  suggest: {}", "", cmd.join(" "));
+        }
+    }
+    println!(
+        "\nNothing was changed. Note: `git worktree remove` also deletes ignored files in the\nworktree (.env, local config), not just build folders. The branch itself is kept."
+    );
 }
 
 fn print_plan(p: &plan::Plan, r: &Report, dry_run: bool) {

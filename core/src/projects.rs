@@ -107,7 +107,7 @@ const TABLE: &[(u32, &str, Safety, &str)] = &[
 
 /// Never look for projects inside these (they contain package.json etc. of
 /// dependencies, not projects of yours).
-const NEVER_DESCEND: &[&str] = &[
+pub(crate) const NEVER_DESCEND: &[&str] = &[
     "node_modules",
     ".git",
     "Pods",
@@ -268,7 +268,7 @@ fn visit(
 }
 
 /// Newest file mtime in the project, ignoring artifacts and `.git` at every level.
-fn active_mtime(node: &DirNode) -> i64 {
+pub(crate) fn active_mtime(node: &DirNode) -> i64 {
     let mut t = node.files_mtime;
     for c in &node.children {
         let n = c.name.as_str();
@@ -281,7 +281,7 @@ fn active_mtime(node: &DirNode) -> i64 {
 }
 
 /// For a linked worktree, `.git` is a file: `gitdir: /main/.git/worktrees/<name>`.
-fn worktree_main(root: &Path) -> Option<PathBuf> {
+pub(crate) fn worktree_main(root: &Path) -> Option<PathBuf> {
     let s = std::fs::read_to_string(root.join(".git")).ok()?;
     let gitdir = s.lines().find_map(|l| l.strip_prefix("gitdir:"))?.trim();
     let idx = gitdir.find("/.git/worktrees/")?;
@@ -346,7 +346,7 @@ pub fn fill_git(projects: &mut [Project], git: Option<&Path>) {
 }
 
 /// Run a command with `input` on stdin; returns (exit code, stdout).
-fn run(
+pub(crate) fn run(
     bin: &Path,
     args: &[&str],
     input: &str,
@@ -391,7 +391,7 @@ fn run(
     Some((code, reader.join().ok()?))
 }
 
-fn head_branch(root: &Path) -> Option<String> {
+pub(crate) fn head_branch(root: &Path) -> Option<String> {
     let dotgit = root.join(".git");
     let gitdir = if dotgit.is_dir() {
         dotgit
