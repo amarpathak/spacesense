@@ -23,6 +23,12 @@ pub type ProgressCb =
 
 struct SendPtr(*mut c_void);
 unsafe impl Send for SendPtr {}
+unsafe impl Sync for SendPtr {}
+impl SendPtr {
+    fn get(&self) -> *mut c_void {
+        self.0
+    }
+}
 
 fn to_c(s: String) -> *mut c_char {
     CString::new(s).unwrap_or_else(|_| CString::new("{\"error\":\"NUL in output\"}").unwrap()).into_raw()
@@ -95,6 +101,77 @@ pub extern "C" fn ss_folder(path: *const c_char, limit: u32) -> *mut c_char {
             None => serde_json::json!({ "error": format!("{} is not in the last scan", path.display()) }).to_string(),
         },
     };
+    to_c(out)
+}
+
+#[derive(serde::Deserialize, Default)]
+struct PlanRequest {
+    #[serde(default)]
+    targets: Vec<String>,
+    #[serde(default)]
+    candidates: bool,
+}
+
+fn parse_request(json: *const c_char) -> Result<PlanRequest, String> {
+    if json.is_null() {
+        return Err("no request".into());
+    }
+    let s = unsafe { CStr::from_ptr(json) }.to_string_lossy().into_owned();
+    serde_json::from_str(&s).map_err(|e| format!("bad request: {e}"))
+}
+
+/// Plan from the last scan. Request JSON: `{"candidates": true}` lists everything
+/// that could be cleaned (nothing selected); `{"targets": [...]}` plans exactly
+/// those targets (what a person picked). Returns a Plan, or `{"error": …}`.
+/// Never changes anything.
+#[no_mangle]
+pub extern "C" fn ss_plan(request: *const c_char) -> *mut c_char {
+    let req = match parse_request(request) {
+        Ok(r) => r,
+        Err(e) => return to_c(serde_json::json!({ "error": e }).to_string()),
+    };
+    let guard = LAST.lock().unwrap_or_else(|e| e.into_inner());
+    let Some(r) = guard.as_ref() else {
+        return to_c(serde_json::json!({ "error": "no scan yet" }).to_string());
+    };
+    let p = plan::build(r, &Selection { targets: req.targets, include_active: false, candidates: req.candidates });
+    to_c(serde_json::to_string(&p).unwrap_or_default())
+}
+
+/// Called before each step: (ctx, step index, total steps, description).
+pub type CleanCb = Option<extern "C" fn(ctx: *mut c_void, index: u32, total: u32, what: *const c_char)>;
+
+/// Clean exactly `{"targets": [...]}`, which a person selected and confirmed in
+/// the app. The plan is rebuilt from the last scan and every step re-checked on
+/// disk before it runs. Returns a CleanResult (measured bytes freed, per step),
+/// or `{"error": …}`. Blocking: call off the main thread, then rescan.
+#[no_mangle]
+pub extern "C" fn ss_clean(request: *const c_char, cb: CleanCb, ctx: *mut c_void) -> *mut c_char {
+    let req = match parse_request(request) {
+        Ok(r) => r,
+        Err(e) => return to_c(serde_json::json!({ "error": e }).to_string()),
+    };
+    if req.candidates || req.targets.is_empty() {
+        return to_c(serde_json::json!({ "error": "name the targets to clean" }).to_string());
+    }
+    let guard = LAST.lock().unwrap_or_else(|e| e.into_inner());
+    let Some(r) = guard.as_ref() else {
+        return to_c(serde_json::json!({ "error": "no scan yet" }).to_string());
+    };
+    let p = plan::build(r, &Selection { targets: req.targets, include_active: false, candidates: false });
+    let opts = spacesense_core::clean::CleanOptions::new(&r.home, plan::protected_paths(r));
+    let ctx = SendPtr(ctx);
+    let progress = |i: usize, n: usize, what: &str| {
+        if let Some(f) = cb {
+            let c = CString::new(what).unwrap_or_default();
+            f(ctx.get(), i as u32, n as u32, c.as_ptr());
+        }
+    };
+    let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let res = spacesense_core::clean::execute(&p, &opts, &progress);
+        serde_json::json!({ "result": res, "skipped": p.skipped }).to_string()
+    }))
+    .unwrap_or_else(|_| "{\"error\":\"internal error (panic) while cleaning\"}".into());
     to_c(out)
 }
 

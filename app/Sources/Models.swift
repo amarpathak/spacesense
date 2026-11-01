@@ -128,7 +128,10 @@ struct Plan: Decodable {
 }
 
 struct PlanAction: Decodable, Identifiable {
-    var id: String { source + title }
+    var id: String { target }
+    /// Pass back to ss_plan / ss_clean to select exactly this action.
+    let target: String
+    let suggested: Bool
     let source: String
     let title: String
     let safety: Safety

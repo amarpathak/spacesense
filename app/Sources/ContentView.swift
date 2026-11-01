@@ -5,6 +5,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
     @EnvironmentObject var scanner: Scanner
+    @EnvironmentObject var cleaner: Cleaner
 
     var body: some View {
         NavigationSplitView {
@@ -20,8 +21,10 @@ struct ContentView: View {
                 FailedView(message: msg)
             case .done(let report, let plan):
                 DetailView(report: report, plan: plan)
-                    .sheet(isPresented: $model.showPlan) {
-                        PlanSheet(report: report, plan: plan)
+                    .sheet(isPresented: $cleaner.showSheet) {
+                        CleanupSheet(report: report)
+                            .environmentObject(cleaner)
+                            .environmentObject(scanner)
                     }
             }
         }

@@ -52,7 +52,8 @@ struct ProjectsView: View {
     @State private var filter: Filter = .all
     @State private var search = ""
     @State private var sort = [KeyPathComparator(\ProjectRow.size, order: .reverse)]
-    @State private var selection: ProjectRow.ID?
+    @State private var selection = Set<ProjectRow.ID>()
+    @EnvironmentObject var cleaner: Cleaner
 
     var rows: [ProjectRow] {
         report.projects.map { ProjectRow($0, report: report) }
@@ -112,8 +113,19 @@ struct ProjectsView: View {
             } primaryAction: { ids in
                 if let id = ids.first { Actions.reveal(id) }
             }
-            if let id = selection, let p = report.projects.first(where: { $0.path == id }) {
+            if selection.count == 1, let id = selection.first, let p = report.projects.first(where: { $0.path == id }) {
                 ProjectDetail(report: report, project: p)
+            }
+            HStack {
+                let cleanable = selection.filter { cleaner.isCandidate($0) }
+                Text(selection.isEmpty ? "Select projects (⌘-click for several) to clean their build folders." :
+                        "\(selection.count) selected\(cleanable.count < selection.count ? ", \(selection.count - cleanable.count) active or protected" : "")")
+                    .font(.callout).foregroundColor(.secondary)
+                Spacer()
+                Button("Clean build folders of \(cleanable.count) project\(cleanable.count == 1 ? "" : "s")…") {
+                    cleaner.open(with: Array(cleanable))
+                }
+                .disabled(cleanable.isEmpty)
             }
             Text("Active in the last 14 days: never preselected. Build folders that git doesn't ignore are never cleaned. Uncommitted changes aren't affected by removing git-ignored folders.")
                 .font(.caption).foregroundColor(.secondary)
@@ -162,7 +174,8 @@ struct LargeFilesView: View {
     }
 
     @State private var sort = [KeyPathComparator(\Row.size, order: .reverse)]
-    @State private var selection: Row.ID?
+    @State private var selection = Set<Row.ID>()
+    @EnvironmentObject var cleaner: Cleaner
 
     var body: some View {
         let rows = report.largeFiles.map { f in
@@ -197,7 +210,15 @@ struct LargeFilesView: View {
             } primaryAction: { ids in
                 if let id = ids.first { Actions.reveal(id) }
             }
-            Text("Double-click a file to reveal it in Finder.").font(.caption).foregroundColor(.secondary)
+            HStack {
+                Text("Double-click a file to reveal it in Finder. ⌘-click to select several.").font(.caption).foregroundColor(.secondary)
+                Spacer()
+                let picked = selection.filter { cleaner.isCandidate($0) }
+                Button("Move \(picked.count) file\(picked.count == 1 ? "" : "s") to Trash…") {
+                    cleaner.open(with: Array(picked))
+                }
+                .disabled(picked.isEmpty)
+            }
         }
         .padding(24)
     }

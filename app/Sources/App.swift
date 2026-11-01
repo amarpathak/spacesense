@@ -6,13 +6,25 @@
 //   --snapshot DIR   render every screen of the real window to DIR/<screen>.png, then quit
 
 import AppKit
+import Combine
 import SwiftUI
 
 final class AppModel: ObservableObject {
     static let shared = AppModel()
     let scanner = Scanner()
+    let cleaner = Cleaner()
     @Published var screen: Screen = .overview
-    @Published var showPlan = false
+    private var sub: Any?
+
+    init() {
+        // After every scan, refresh the list of things that *could* be cleaned
+        // (nothing selected).
+        sub = scanner.$state.sink { [weak self] st in
+            if case .done = st {
+                DispatchQueue.main.async { self?.cleaner.loadCandidates() }
+            }
+        }
+    }
     /// Folder shown on the Folders screen (nil = scan root).
     @Published var folderPath: String?
 
@@ -90,6 +102,7 @@ struct SpaceSenseApp: App {
             ContentView()
                 .environmentObject(model)
                 .environmentObject(model.scanner)
+                .environmentObject(model.cleaner)
                 .frame(minWidth: 900, minHeight: 600)
         }
         .windowToolbarStyle(.unified)
@@ -116,7 +129,9 @@ enum Snapshotter {
         for sub in ["Library", "Library/Containers", "Library/Application Support", "Library/Caches"] {
             steps.append(("Folders " + sub.replacingOccurrences(of: "/", with: "-"), { model.browse(home + "/" + sub) }))
         }
-        steps.append(("Plan", { model.screen = .overview; model.showPlan = true }))
+        steps.append(("Clean-choose", { model.screen = .overview; model.cleaner.open() }))
+        // Only shows the confirmation screen; nothing is run.
+        steps.append(("Clean-confirm", { model.cleaner.open(with: ["npm-cache", "yarn-v1-cache", "docker-desktop"]) }))
         func next(_ i: Int) {
             guard i < steps.count else {
                 AppDelegate.quitNow()

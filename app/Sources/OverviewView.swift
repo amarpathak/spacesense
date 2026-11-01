@@ -11,7 +11,7 @@ struct OverviewView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 DiskCard(report: report)
-                ReclaimCard(plan: plan, onPreview: { model.showPlan = true })
+                ReclaimCard(plan: plan, onPreview: { model.cleaner.open() })
                 if !report.needsFullDiskAccess.isEmpty {
                     FullDiskAccessBanner(count: report.needsFullDiskAccess.count)
                 }
@@ -102,14 +102,14 @@ struct ReclaimCard: View {
             HStack(alignment: .center, spacing: 20) {
                 Image(systemName: "sparkles").font(.system(size: 34)).foregroundColor(.green)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("≈ \(Fmt.size(plan.totalBytes)) safely reclaimable")
+                    Text("≈ \(Fmt.size(plan.totalBytes)) could be freed safely")
                         .font(.system(size: 26, weight: .semibold))
-                    Text("Caches, rebuildable data and build folders of projects untouched for 30+ days. Active projects, anything git tracks and anything that needs a look first are left out.")
+                    Text("Caches, rebuildable data and build folders of projects untouched for 30+ days. You choose what to clean and confirm every step; nothing is removed on its own.")
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
-                Button("Preview cleanup…", action: onPreview)
+                Button("Choose what to clean…", action: onPreview)
                     .controlSize(.large)
                     .keyboardShortcut(.defaultAction)
             }

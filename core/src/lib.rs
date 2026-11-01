@@ -8,12 +8,14 @@
 
 pub mod backend;
 pub mod catalog;
+pub mod clean;
 pub mod explain;
 pub mod markers;
 pub mod plan;
 pub mod projects;
 pub mod report;
 pub mod safety;
+pub mod trash;
 
 pub use backend::{Backend, Kind};
 

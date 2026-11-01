@@ -248,6 +248,7 @@ dependencies = [
  "libc",
  "rayon",
  "serde",
+ "serde_json",
  "tempfile",
  "toml",
 ]
@@ -256,6 +257,7 @@ dependencies = [
 name = "spacesense-ffi"
 version = "0.0.1"
 dependencies = [
+ "serde",
  "serde_json",
  "spacesense-core",
 ]

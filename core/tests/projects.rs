@@ -253,6 +253,7 @@ fn default_plan_respects_guards() {
         &Selection {
             targets: vec![h.join("active").display().to_string()],
             include_active: false,
+            candidates: false,
         },
     );
     assert!(named.actions.is_empty());
@@ -261,6 +262,7 @@ fn default_plan_respects_guards() {
         &Selection {
             targets: vec![h.join("active").display().to_string()],
             include_active: true,
+            candidates: false,
         },
     );
     assert_eq!(forced.actions.len(), 1);
@@ -271,6 +273,7 @@ fn default_plan_respects_guards() {
         &Selection {
             targets: vec!["/".into()],
             include_active: true,
+            candidates: false,
         },
     );
     assert!(bogus.actions.is_empty());

@@ -33,6 +33,7 @@ struct RulesView: View {
 }
 
 struct RuleCard: View {
+    @EnvironmentObject var cleaner: Cleaner
     let report: Report
     let rule: RuleReport
     @State private var expanded = false
@@ -59,6 +60,10 @@ struct RuleCard: View {
                     Spacer()
                     SizeText(bytes: rule.size, font: .title3.weight(.semibold))
                         .foregroundColor(rule.size == 0 ? .secondary : .primary)
+                    if cleaner.isCandidate(rule.id) {
+                        Button("Clean…") { cleaner.open(with: [rule.id]) }
+                            .help("Shows exactly what will happen; nothing runs until you confirm.")
+                    }
                 }
                 if !flags.isEmpty {
                     HStack(spacing: 6) {

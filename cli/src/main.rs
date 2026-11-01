@@ -1,6 +1,7 @@
 //! `spacesense` CLI: scan, report, clean --dry-run.
 
 use spacesense_core::catalog::Safety;
+use spacesense_core::clean;
 use spacesense_core::plan::{self, Selection, Step};
 use spacesense_core::report::{self, Report, ReportOptions};
 use spacesense_core::{scan_with_progress, Backend, DirNode, Progress, ScanOptions};
@@ -15,16 +16,19 @@ usage:
   spacesense scan   [PATH] [--json] [--top N] [--depth N] [--kib] [--progress]
   spacesense report [PATH] [--json [--plan]] [--no-git] [--all]
   spacesense clean  --dry-run [TARGET...] [--json] [--include-active]
+  spacesense clean  TARGET... [--include-active]
 
 PATH defaults to your home folder.
 
 report   what is using space: caches and tools (catalog rules), project build
          artifacts (node_modules, target/, ...), large files. --all also lists
          rules that found nothing.
-clean    prints what would be cleaned, without changing anything (--dry-run is
-         required until cleaning lands in M3). With no TARGET it plans the
-         default selection: caches, regenerable data and projects untouched for
-         30+ days. TARGET is a rule id (see `report`) or a project path.
+clean    --dry-run prints what would be cleaned without changing anything; with
+         no TARGET it shows suggestions (caches, regenerable data, projects
+         untouched for 30+ days). Without --dry-run it cleans only the TARGETs
+         you name, after showing the exact steps and asking you to type yes.
+         TARGET: a rule id (see `report`), a project or build-folder path, or a
+         large file path (moved to the Trash).
 
 common options:
   --backend bulk|stat   listing backend (default: bulk = getattrlistbulk)
@@ -172,10 +176,14 @@ fn main() -> ExitCode {
             Err(c) => c,
         },
         "clean" => {
-            if !args.dry_run {
-                eprintln!(
-                    "error: cleaning isn't implemented yet (milestone M3). Use `spacesense clean --dry-run` to see the plan."
-                );
+            // Cleaning always needs a person: explicit targets, the exact plan
+            // shown, and "yes" typed at a terminal. No flag skips this.
+            if !args.dry_run && args.targets.is_empty() {
+                eprintln!("error: name what to clean (rule ids, project or file paths from `spacesense report`).\nSpaceSense never cleans a default selection. `spacesense clean --dry-run` shows suggestions.");
+                return ExitCode::from(2);
+            }
+            if !args.dry_run && (args.json || !std::io::IsTerminal::is_terminal(&std::io::stdin())) {
+                eprintln!("error: cleaning needs you to confirm at a terminal; it can't run unattended.");
                 return ExitCode::from(2);
             }
             let r = match build_report(&args, root) {
@@ -185,13 +193,47 @@ fn main() -> ExitCode {
             let sel = Selection {
                 targets: args.targets.clone(),
                 include_active: args.include_active,
+                candidates: false,
             };
             let p = plan::build(&r, &sel);
             if args.json {
                 println!("{}", serde_json::to_string_pretty(&p).unwrap());
-            } else {
-                print_plan(&p, &r);
+                return ExitCode::SUCCESS;
             }
+            print_plan(&p, &r, args.dry_run);
+            if args.dry_run {
+                return ExitCode::SUCCESS;
+            }
+            if p.actions.is_empty() {
+                eprintln!("\nNothing to clean.");
+                return ExitCode::FAILURE;
+            }
+            eprint!("\nType yes to do exactly the steps above: ");
+            let mut answer = String::new();
+            let _ = std::io::stdin().read_line(&mut answer);
+            if answer.trim() != "yes" {
+                eprintln!("Cancelled. Nothing was changed.");
+                return ExitCode::FAILURE;
+            }
+            let opts = clean::CleanOptions::new(&r.home, plan::protected_paths(&r));
+            let res = clean::execute(&p, &opts, &|i, n, what| {
+                if i < n {
+                    eprintln!("[{}/{}] {}", i + 1, n, what);
+                }
+            });
+            println!();
+            for a in &res.actions {
+                println!("{:>10}  {}", human(a.freed_bytes), a.title);
+                for s in &a.steps {
+                    let mark = if s.ok { "ok" } else if s.skipped { "SKIPPED" } else { "FAILED" };
+                    println!("            {mark}: {}", s.message);
+                }
+            }
+            println!("\nFreed (measured): {}", human(res.freed_bytes));
+            if let (Some(b), Some(a)) = (res.free_before, res.free_after) {
+                println!("Free space: {} → {}", human(b), human(a));
+            }
+            println!("Log: {}", res.log_path.display());
             ExitCode::SUCCESS
         }
         _ => unreachable!(),
@@ -363,9 +405,13 @@ fn print_report(r: &Report, all: bool) {
     }
 }
 
-fn print_plan(p: &plan::Plan, r: &Report) {
+fn print_plan(p: &plan::Plan, r: &Report, dry_run: bool) {
     let h = &r.home;
-    println!("DRY RUN: nothing will be changed.\n");
+    if dry_run {
+        println!("DRY RUN: nothing will be changed.\n");
+    } else {
+        println!("PLAN: these steps run only after you type yes.\n");
+    }
     // Small project actions are summarized in one line to keep the plan readable.
     const SMALL: u64 = 20_000_000;
     let (small, shown): (Vec<_>, Vec<_>) = p
@@ -383,7 +429,7 @@ fn print_plan(p: &plan::Plan, r: &Report) {
         let mut dirs = 0;
         for s in &a.steps {
             match s {
-                Step::Run { argv, dry_run_argv } => {
+                Step::Run { argv, dry_run_argv, .. } => {
                     println!("              run: {}", argv.join(" "));
                     if let Some(d) = dry_run_argv {
                         println!("              (preview with: {})", d.join(" "));
