@@ -206,6 +206,7 @@ struct Breadcrumbs: View {
 }
 
 struct FolderHeader: View {
+    @EnvironmentObject var cleaner: Cleaner
     let report: Report
     let listing: FolderListing
     var body: some View {
@@ -219,6 +220,12 @@ struct FolderHeader: View {
                         if let s = listing.info.safety { SafetyBadge(safety: s) }
                         Spacer()
                         SizeText(bytes: listing.size, font: .title2.weight(.semibold))
+                        if cleanable(listing.path, info: listing.info, report: report) {
+                            Button(listing.info.safety == .review ? "Move to Trash…" : "Clean this folder…") {
+                                let t = listing.info.ruleId.flatMap { listing.info.label.hasPrefix("Part of") ? nil : $0 } ?? ("folder:" + listing.path)
+                                cleaner.open(with: [t])
+                            }
+                        }
                     }
                     Text(ownerLine(owner, label: listing.info.label)).foregroundColor(.secondary)
                     if !listing.info.explanation.isEmpty {
@@ -259,7 +266,21 @@ struct AppIcon: View {
     }
 }
 
+/// Folders that can be offered for cleaning: known verdict (not "don't
+/// delete"), and not a container of many apps' or the user's data. The core
+/// re-checks all of this.
+func cleanable(_ path: String, info: Explanation, report: Report) -> Bool {
+    guard let s = info.safety, s != .neverAuto else { return false }
+    let home = report.home
+    guard path.hasPrefix(home + "/") else { return false }
+    let parts = path.dropFirst(home.count + 1).split(separator: "/")
+    if parts.count == 1 && ["Library", "Desktop", "Documents", "Downloads", "Pictures", "Movies", "Music", "Applications", "Public"].contains(String(parts[0])) { return false }
+    if parts.count == 2 && parts[0] == "Library" { return false }
+    return true
+}
+
 struct FolderRow: View {
+    @EnvironmentObject var cleaner: Cleaner
     let report: Report
     let item: FolderItem
     let parentSize: UInt64
@@ -303,6 +324,13 @@ struct FolderRow: View {
                     Text("modified \(Fmt.age(days: report.daysAgo(item.newestMtime)))").font(.caption).foregroundColor(.secondary)
                 }
                 .frame(width: 140, alignment: .trailing)
+                if cleanable(item.path, info: item.info, report: report) && item.error == nil {
+                    Button(item.info.safety == .review ? "Trash…" : "Clean…") {
+                        cleaner.open(with: [target(item)])
+                    }
+                    .help(item.info.safety == .review ? "Move to the Trash, after you review it" : "Delete, after you review it")
+                    .opacity(hover ? 1 : 0.55)
+                }
                 Image(systemName: "chevron.right").foregroundColor(item.hasChildren ? .secondary : .clear)
             }
             .padding(.horizontal, 14)
@@ -313,10 +341,20 @@ struct FolderRow: View {
         .buttonStyle(.plain)
         .onHover { hover = $0 }
         .contextMenu {
+            if cleanable(item.path, info: item.info, report: report) {
+                Button(item.info.safety == .review ? "Move to Trash…" : "Clean…") { cleaner.open(with: [target(item)]) }
+                Divider()
+            }
             Button("Reveal in Finder") { Actions.reveal(item.path) }
             Button("Copy Path") { Actions.copy(item.path) }
         }
     }
+}
+
+/// A rule's own target when the folder is exactly a catalog location, else the folder.
+func target(_ item: FolderItem) -> String {
+    if let r = item.info.ruleId, !(item.info.label.hasPrefix("Part of")) { return r }
+    return "folder:" + item.path
 }
 
 struct InfoRow: View {

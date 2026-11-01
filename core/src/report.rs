@@ -121,6 +121,12 @@ impl Report {
         crate::explain::explain(path, &self.home)
     }
 
+    /// Size of a folder from the scan tree (None if not in it).
+    pub fn size_of(&self, path: &Path) -> Option<&DirNode> {
+        let rel = path.strip_prefix(&self.root).ok()?;
+        self.tree.as_ref()?.find(rel)
+    }
+
     /// Contents of `path` (must be inside the scanned root), biggest first.
     pub fn listing(&self, path: &Path, limit: usize) -> Option<FolderListing> {
         let tree = self.tree.as_ref()?;

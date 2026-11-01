@@ -132,6 +132,10 @@ enum Snapshotter {
         steps.append(("Clean-choose", { model.screen = .overview; model.cleaner.open() }))
         // Only shows the confirmation screen; nothing is run.
         steps.append(("Clean-confirm", { model.cleaner.open(with: ["npm-cache", "yarn-v1-cache", "docker-desktop"]) }))
+        steps.append(("Folders-Chrome", { model.cleaner.showSheet = false; model.browse(home + "/Library/Application Support/Google/Chrome") }))
+        steps.append(("Clean-confirm-folder", {
+            model.cleaner.open(with: ["chrome-ai-model", "folder:" + home + "/Library/Caches/com.spotify.client"])
+        }))
         func next(_ i: Int) {
             guard i < steps.count else {
                 AppDelegate.quitNow()

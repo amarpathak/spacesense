@@ -1,0 +1,11 @@
+id = "chrome-ai-model"
+name = "Chrome on-device AI model"
+category = "app-data"
+paths = ["~/Library/Application Support/Google/Chrome/OptGuideOnDeviceModel"]
+quit_apps = ["Google Chrome"]
+safety = "review"
+fallback = "trash"
+comes_back = "Chrome downloads it again (about 4 GB) if its built-in AI features are on. To stop that, turn off Settings → System → On-device AI in Chrome first."
+explanation = "Gemini Nano, the AI model Chrome downloads for built-in features like writing help and scam detection. Older versions can stay behind next to the current one."
+docs_url = "https://developer.chrome.com/docs/ai/get-started"
+verified = "path and two 4.27 GB versions seen on owner's Mac 2026-11-01; Chrome setting name from community reports"

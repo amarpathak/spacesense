@@ -122,7 +122,7 @@ struct LargeFile: Decodable, Identifiable, Hashable {
 }
 
 struct Plan: Decodable {
-    let actions: [PlanAction]
+    var actions: [PlanAction]
     let skipped: [Skipped]
     let totalBytes: UInt64
 }

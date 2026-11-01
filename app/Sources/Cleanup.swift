@@ -84,10 +84,49 @@ final class Cleaner: ObservableObject {
     /// the person just picked elsewhere (a card's Clean button, table rows).
     func open(with targets: [String] = []) {
         guard !isRunning else { showSheet = true; return }
-        let known = Set((candidates?.actions ?? []).map { $0.target })
+        var known = Set((candidates?.actions ?? []).map { $0.target })
+        // Targets that aren't in the candidate list (folders picked in the Folders
+        // screen): plan them now and add them, so they can be reviewed.
+        let extra = targets.filter { !known.contains($0) }
+        if !extra.isEmpty, let p = Cleaner.plan(targets: extra) {
+            var list = candidates?.actions ?? []
+            list.append(contentsOf: p.actions.filter { !known.contains($0.target) })
+            candidates = Plan(actions: list, skipped: candidates?.skipped ?? [], totalBytes: candidates?.totalBytes ?? 0)
+            known = Set(list.map { $0.target })
+            if p.actions.isEmpty, let s = p.skipped.first {
+                stage = .failed("Can't clean \(s.target): \(s.reason).")
+                showSheet = true
+                return
+            }
+        }
         selected = Set(targets.filter { known.contains($0) })
         stage = selected.isEmpty ? .choose : .confirm
         showSheet = true
+    }
+
+    /// Plan exact targets (never changes anything).
+    static func plan(targets: [String]) -> Plan? {
+        guard let d = try? JSONSerialization.data(withJSONObject: ["targets": targets]),
+              let req = String(data: d, encoding: .utf8) else { return nil }
+        let raw = req.withCString { ss_plan($0) }
+        defer { ss_free(raw) }
+        guard let raw = raw else { return nil }
+        return try? Cleaner.decoder().decode(Plan.self, from: Data(String(cString: raw).utf8))
+    }
+
+    /// Apps that must be quit, found by bundle id (folder names like
+    /// com.spotify.client), which the core can't see in the process list.
+    static func runningOwners(_ actions: [PlanAction]) -> [String] {
+        let running = NSWorkspace.shared.runningApplications
+        var out: [String] = []
+        for a in actions where a.source == "folder" || a.source == "chrome-ai-model" {
+            for comp in a.title.split(separator: "/").map(String.init) {
+                if let app = running.first(where: { $0.bundleIdentifier == comp }) {
+                    out.append("quit \(app.localizedName ?? comp) first (\(comp))")
+                }
+            }
+        }
+        return out
     }
 
     func isCandidate(_ target: String) -> Bool {
@@ -285,6 +324,7 @@ struct ConfirmView: View {
         let actions = cleaner.selectedActions
         let permanent = actions.contains { $0.steps.contains { $0.type == "delete-dir" || $0.type == "delete-contents" || $0.type == "run" } }
         let blocked = actions.filter { !($0.blockers ?? []).isEmpty }
+        let owners = Cleaner.runningOwners(actions)
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Review before cleaning").font(.title2.weight(.semibold))
@@ -295,9 +335,13 @@ struct ConfirmView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 ForEach(blocked) { a in
-                    Label("\(a.title): \((a.blockers ?? []).joined(separator: ", ")). It will be skipped unless you do that before cleaning.", systemImage: "exclamationmark.triangle")
+                    Label("\(report.tilde(a.title)): \((a.blockers ?? []).joined(separator: ", ")). It will be skipped unless you do that before cleaning.", systemImage: "exclamationmark.triangle")
                         .font(.callout).foregroundColor(.orange)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                ForEach(owners, id: \.self) { o in
+                    Label("To clean this app's folder, \(o). Then press Check again.", systemImage: "exclamationmark.triangle")
+                        .font(.callout).foregroundColor(.orange)
                 }
             }
             .padding(20)
@@ -331,12 +375,15 @@ struct ConfirmView: View {
                 Spacer()
                 Button("Back") { cleaner.stage = .choose }
                     .keyboardShortcut(.cancelAction)
+                if !owners.isEmpty {
+                    Button("Check again") { cleaner.objectWillChange.send() }
+                }
                 Button("Clean \(actions.count) item\(actions.count == 1 ? "" : "s")") {
                     cleaner.run { scanner.start(root: LaunchOptions.current.root) }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
-                .disabled(actions.isEmpty)
+                .disabled(actions.isEmpty || !owners.isEmpty)
             }
             .padding(16)
         }
@@ -409,7 +456,7 @@ struct DoneView: View {
             HStack {
                 Button("Show log") { Actions.reveal(result.logPath) }
                 Spacer()
-                Text("Rescanning to show the new numbers…").font(.caption).foregroundColor(.secondary)
+                Text("The numbers update in the background; you can keep working.").font(.caption).foregroundColor(.secondary)
                 Button("Done") { cleaner.showSheet = false }
                     .keyboardShortcut(.defaultAction)
             }

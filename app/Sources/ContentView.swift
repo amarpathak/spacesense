@@ -77,6 +77,21 @@ struct Sidebar: View {
     }
 
     @ViewBuilder private var footer: some View {
+        if let p = scanner.refreshing {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    ProgressView().controlSize(.small)
+                    Text("Updating numbers…").font(.caption)
+                }
+                Text("\(Fmt.count(p.files)) files read").font(.caption).foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            footerState
+        }
+    }
+
+    @ViewBuilder private var footerState: some View {
         switch scanner.state {
         case .done(let r, _):
             VStack(alignment: .leading, spacing: 2) {

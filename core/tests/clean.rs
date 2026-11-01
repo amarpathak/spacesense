@@ -230,3 +230,58 @@ fn trash_moves_file_out() {
     spacesense_core::trash::trash(&f).unwrap();
     assert!(!f.exists());
 }
+
+#[test]
+fn folder_targets_follow_the_verdict() {
+    let fx = fixture();
+    let h = &fx.home;
+    w(&h.join("Library/Caches/com.example.app/blob"), 200_000);
+    w(&h.join("Library/Application Support/ExampleApp/db"), 100_000);
+    w(&h.join("Library/Keychains/login"), 1000);
+    w(&h.join(".ssh/id_ed25519"), 400);
+    w(&h.join("Documents/old/report.pdf"), 1000);
+    w(&h.join("mystery/thing"), 1000);
+    let r = report(&fx);
+    let f = |rel: &str| format!("{}{}", plan::FOLDER, h.join(rel).display());
+    let p = select(&r, &[
+        &f("Library/Caches/com.example.app"),
+        &f("Library/Application Support/ExampleApp"),
+        &f("Library/Application Support"),
+        &f("Library/Keychains"),
+        &f(".ssh"),
+        &f("Documents"),
+        &f("mystery"),
+    ]);
+    let step_of = |rel: &str| {
+        p.actions.iter().find(|a| a.target == f(rel)).map(|a| a.steps[0].clone())
+    };
+    assert!(matches!(step_of("Library/Caches/com.example.app"), Some(Step::DeleteDir { .. })));
+    assert!(matches!(step_of("Library/Application Support/ExampleApp"), Some(Step::Trash { .. })));
+    for refused in ["Library/Application Support", "Library/Keychains", ".ssh", "Documents", "mystery"] {
+        assert!(step_of(refused).is_none(), "{refused} should be refused");
+        assert!(p.skipped.iter().any(|s| s.target.ends_with(refused)), "{refused} missing from skipped: {:?}", p.skipped);
+    }
+    // Run only the cache deletion (the Trash step would use the real Trash).
+    let only_cache = select(&r, &[&f("Library/Caches/com.example.app")]);
+    let res = clean::execute(&only_cache, &opts(&fx, &r), &|_, _, _| {});
+    assert!(res.actions[0].steps[0].ok);
+    assert!(!h.join("Library/Caches/com.example.app").exists());
+    assert!(h.join("Library/Keychains/login").exists() && h.join(".ssh/id_ed25519").exists());
+}
+
+#[test]
+fn delete_old_keeps_recent_files() {
+    let fx = fixture();
+    let h = &fx.home;
+    w(&h.join("Library/Logs/app/old.log"), 100_000);
+    w(&h.join("Library/Logs/app/new.log"), 100_000);
+    sh(&h.join("Library/Logs/app"), "touch -t 202001010000 old.log");
+    rule(&fx, "logs", "paths = [\"~/Library/Logs\"]\nsafety = \"cache\"\nfallback = \"delete-old\"\nolder_than_days = 30\n");
+    let r = report(&fx);
+    let p = select(&r, &["logs"]);
+    assert!(p.actions[0].bytes >= 100_000 && p.actions[0].bytes < 200_000, "{}", p.actions[0].bytes);
+    let res = clean::execute(&p, &opts(&fx, &r), &|_, _, _| {});
+    assert!(res.actions[0].steps[0].ok, "{:?}", res.actions[0].steps[0]);
+    assert!(!h.join("Library/Logs/app/old.log").exists());
+    assert!(h.join("Library/Logs/app/new.log").exists());
+}

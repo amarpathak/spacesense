@@ -439,6 +439,9 @@ fn print_plan(p: &plan::Plan, r: &Report, dry_run: bool) {
                     println!("              delete contents of {}", tilde(path, h))
                 }
                 Step::Trash { path } => println!("              move to Trash: {}", tilde(path, h)),
+                Step::DeleteOld { path, days } => {
+                    println!("              delete files older than {days} days in {}", tilde(path, h))
+                }
                 Step::DeleteDir { path } => {
                     dirs += 1;
                     if dirs <= 4 {

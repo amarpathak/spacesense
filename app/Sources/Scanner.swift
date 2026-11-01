@@ -24,9 +24,18 @@ final class Scanner: ObservableObject {
 
     @Published private(set) var state: State = .idle
     @Published private(set) var lastDuration: TimeInterval = 0
+    /// Non-nil while results stay on screen and a new scan runs behind them
+    /// (after cleaning, or Rescan when results are already shown).
+    @Published private(set) var refreshing: ScanProgress?
 
     var isScanning: Bool {
+        if refreshing != nil { return true }
         if case .scanning = state { return true }
+        return false
+    }
+
+    var hasResults: Bool {
+        if case .done = state { return true }
         return false
     }
 
@@ -38,9 +47,16 @@ final class Scanner: ObservableObject {
         init(_ s: Scanner) { scanner = s }
     }
 
+    /// Scan. When results are already shown, they stay visible and are
+    /// replaced when the new scan finishes.
     func start(root: String? = nil) {
         guard !isScanning else { return }
-        state = .scanning(ScanProgress())
+        let background = hasResults
+        if background {
+            refreshing = ScanProgress()
+        } else {
+            state = .scanning(ScanProgress())
+        }
         let sink = Unmanaged.passRetained(Sink(self))
         let started = Date()
         // Without this, App Nap throttles a scan started while the window isn't
@@ -58,8 +74,13 @@ final class Scanner: ObservableObject {
                         sink.lastChange = Date()
                     }
                     let stalled = phase == 0 && dirs > 0 && Date().timeIntervalSince(sink.lastChange) > 4
-                    s.state = .scanning(ScanProgress(dirs: dirs, files: files, bytes: bytes, phase: phase,
-                                                     waitingForPermission: stalled))
+                    let p = ScanProgress(dirs: dirs, files: files, bytes: bytes, phase: phase,
+                                         waitingForPermission: stalled)
+                    if s.refreshing != nil {
+                        s.refreshing = p
+                    } else {
+                        s.state = .scanning(p)
+                    }
                 }
             }
             let raw: UnsafeMutablePointer<CChar>?
@@ -75,7 +96,11 @@ final class Scanner: ObservableObject {
                 sink.release()
                 ProcessInfo.processInfo.endActivity(activity)
                 self.lastDuration = Date().timeIntervalSince(started)
-                self.state = result
+                // A failed background refresh keeps the previous results visible.
+                if self.refreshing == nil || { if case .done = result { return true }; return false }() {
+                    self.state = result
+                }
+                self.refreshing = nil
                 print(String(format: "spacesense: scan finished in %.1f s", self.lastDuration))
                 fflush(stdout)
             }

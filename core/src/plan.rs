@@ -32,7 +32,12 @@ pub enum Step {
     DeleteContents { path: PathBuf },
     DeleteDir { path: PathBuf },
     Trash { path: PathBuf },
+    /// Delete files (not folders) last modified more than `days` ago.
+    DeleteOld { path: PathBuf, days: u32 },
 }
+
+/// Prefix for a folder picked in the Folders screen ("folder:/Users/me/...").
+pub const FOLDER: &str = "folder:";
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Action {
@@ -113,7 +118,10 @@ pub fn build(report: &Report, sel: &Selection) -> Plan {
             }
             continue;
         }
-        let has_action = r.rule.official_cmd.is_some() || r.rule.fallback != Fallback::None || r.leftover;
+        let has_action = r.rule.official_cmd.is_some()
+            || r.rule.fallback != Fallback::None
+            || r.leftover
+            || (r.rule.special.as_deref() == Some("tm-snapshots") && tm_snapshot_count() > 0);
         if named.is_none() && !has_action {
             continue; // nothing SpaceSense can do; shown in `report`
         }
@@ -262,7 +270,16 @@ pub fn build(report: &Report, sel: &Selection) -> Plan {
         }
     }
 
+    // Folders picked in the folder browser.
     if explicit {
+        for (i, t) in sel.targets.iter().enumerate() {
+            let Some(p) = t.strip_prefix(FOLDER) else { continue };
+            matched[i] = true;
+            match folder_action(report, Path::new(p), &protected) {
+                Ok(a) => plan.actions.push(a),
+                Err(why) => plan.skipped.push(skip(p, report.size_of(Path::new(p)).map(|n| n.size).unwrap_or(0), &why)),
+            }
+        }
         for (t, m) in sel.targets.iter().zip(matched) {
             if !m {
                 plan.skipped.push(skip(t, 0, "no rule, project or file matches this target"));
@@ -291,8 +308,39 @@ fn rule_action(r: &RuleReport, home: &Path, protected: &[PathBuf]) -> Result<Act
     if r.safety == Safety::NeverAuto {
         return Err("never cleaned (shown for information only)".into());
     }
+    if r.rule.special.as_deref() == Some("tm-snapshots") {
+        let n = tm_snapshot_count();
+        if n == 0 {
+            return Err("no local Time Machine snapshots".into());
+        }
+        return Ok(Action {
+            target: r.id.clone(),
+            source: r.id.clone(),
+            title: format!("{} ({n})", r.name),
+            safety: r.safety,
+            bytes: 0,
+            steps: vec![Step::Run {
+                // macOS shows its own administrator password prompt.
+                argv: vec![
+                    "/usr/bin/osascript".into(),
+                    "-e".into(),
+                    "do shell script \"/usr/bin/tmutil deletelocalsnapshots /\" with administrator privileges".into(),
+                ],
+                dry_run_argv: None,
+                measure: vec![],
+            }],
+            warnings: vec![
+                "macOS asks for your administrator password.".into(),
+                "Their size can't be measured beforehand; check free space after.".into(),
+                r.rule.comes_back.clone(),
+            ],
+            blockers: vec![],
+            quit_apps: vec![],
+            suggested: false,
+        });
+    }
     if r.rule.special.is_some() {
-        return Err("not supported yet (needs an administrator prompt)".into());
+        return Err("not supported yet".into());
     }
     if r.rule.generic {
         return Err("pick individual apps' caches (generic location)".into());
@@ -332,9 +380,16 @@ fn rule_action(r: &RuleReport, home: &Path, protected: &[PathBuf]) -> Result<Act
                 Fallback::DeleteContents => Step::DeleteContents { path: real },
                 Fallback::DeleteDir => Step::DeleteDir { path: real },
                 Fallback::Trash => Step::Trash { path: real },
+                Fallback::DeleteOld => Step::DeleteOld { path: real, days: r.rule.older_than_days.unwrap_or(30) },
                 Fallback::None => unreachable!(),
             });
         }
+    }
+    let mut bytes = r.size;
+    if fallback == Fallback::DeleteOld && !use_official {
+        let days = r.rule.older_than_days.unwrap_or(30);
+        bytes = r.paths.iter().map(|p| old_files_bytes(&p.path, days)).sum();
+        warnings.push(format!("only files older than {days} days"));
     }
     if r.safety == Safety::Review && !r.leftover {
         warnings.push(r.rule.comes_back.clone());
@@ -344,11 +399,110 @@ fn rule_action(r: &RuleReport, home: &Path, protected: &[PathBuf]) -> Result<Act
         source: r.id.clone(),
         title: r.name.clone(),
         safety: r.safety,
-        bytes: r.size,
+        bytes,
         steps,
         warnings,
         blockers: r.running_apps.iter().map(|a| format!("quit {a} first")).collect(),
         quit_apps: r.rule.quit_apps.clone(),
+        suggested: false,
+    })
+}
+
+/// Bytes of files under `dir` last modified more than `days` ago.
+pub fn old_files_bytes(dir: &Path, days: u32) -> u64 {
+    use std::os::unix::fs::MetadataExt;
+    let cutoff = std::time::SystemTime::now() - std::time::Duration::from_secs(days as u64 * 86_400);
+    let mut total = 0;
+    let mut stack = vec![dir.to_path_buf()];
+    while let Some(d) = stack.pop() {
+        let Ok(rd) = std::fs::read_dir(&d) else { continue };
+        for e in rd.flatten() {
+            let Ok(m) = e.path().symlink_metadata() else { continue };
+            if m.is_dir() {
+                stack.push(e.path());
+            } else if m.modified().map(|t| t < cutoff).unwrap_or(false) {
+                total += m.blocks() * 512;
+            }
+        }
+    }
+    total
+}
+
+fn tm_snapshot_count() -> usize {
+    std::process::Command::new("/usr/bin/tmutil")
+        .args(["listlocalsnapshots", "/"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).lines().filter(|l| l.contains("com.apple.TimeMachine")).count())
+        .unwrap_or(0)
+}
+
+/// Process names of the app that owns `~/Library/<kind>/<name>`, for the
+/// "quit it first" check. Folder names usually match; a few vendors don't.
+fn owner_processes(name: &str) -> Vec<String> {
+    let mapped = match name {
+        "Google" | "com.google.Chrome" => "Google Chrome",
+        "BraveSoftware" | "com.brave.Browser" => "Brave Browser",
+        "Microsoft Edge" | "com.microsoft.edgemac" => "Microsoft Edge",
+        "Code" | "com.microsoft.VSCode" => "Code",
+        "Firefox" | "Mozilla" | "org.mozilla.firefox" => "firefox",
+        "com.tinyspeck.slackmacgap" => "Slack",
+        other if !other.contains('.') => other,
+        _ => return Vec::new(),
+    };
+    vec![mapped.to_string()]
+}
+
+/// A folder picked in the Folders screen. The verdict decides the action:
+/// cache / rebuildable → delete; review → Trash; don't-delete or unknown → refused.
+fn folder_action(report: &Report, path: &Path, protected: &[PathBuf]) -> Result<Action, String> {
+    let rel = path.strip_prefix(&report.home).map_err(|_| "outside your home folder".to_string())?;
+    let parts: Vec<&str> = rel.iter().filter_map(|c| c.to_str()).collect();
+    const TOP: &[&str] = &["Library", "Desktop", "Documents", "Downloads", "Pictures", "Movies", "Music", "Applications", "Public"];
+    if parts.is_empty() || (parts.len() == 1 && TOP.contains(&parts[0])) || (parts.len() == 2 && parts[0] == "Library") {
+        return Err("this folder holds many apps' or your own data: pick a folder inside it".into());
+    }
+    let node = report.size_of(path).ok_or("not in the last scan; rescan first")?;
+    if node.error.as_deref() == Some(crate::SKIPPED) {
+        return Err("cloud storage isn't cleaned by SpaceSense".into());
+    }
+    let info = report.explain(path);
+    let step_for = |real: PathBuf| match info.safety {
+        Some(Safety::Cache) | Some(Safety::Regenerable) => Ok(Step::DeleteDir { path: real }),
+        Some(Safety::Review) => Ok(Step::Trash { path: real }),
+        Some(Safety::NeverAuto) => Err(format!("{}: don't delete", info.label)),
+        None => Err("SpaceSense doesn't know what this folder is; use Finder if you're sure".to_string()),
+    };
+    let real = safety::validate(path, &report.home, protected).map_err(|e| e.to_string())?;
+    let step = step_for(real)?;
+    let mut warnings = Vec::new();
+    if matches!(step, Step::Trash { .. }) {
+        warnings.push("moved to the Trash: you can put it back; the space returns when you empty the Trash".into());
+    } else {
+        warnings.push("deleted permanently; the app rebuilds it when needed".into());
+    }
+    let inside_projects = report.projects.iter().filter(|p| p.path.starts_with(path)).count();
+    if inside_projects > 0 {
+        warnings.push(format!("contains {inside_projects} project(s), including their source code"));
+    }
+    if !info.explanation.is_empty() {
+        warnings.push(info.explanation.clone());
+    }
+    let quit_apps = match parts.as_slice() {
+        ["Library", "Application Support" | "Caches" | "Containers" | "Logs" | "Saved Application State", app, ..] => owner_processes(app),
+        _ => Vec::new(),
+    };
+    let running = crate::catalog::running_process_names();
+    let blockers = quit_apps.iter().filter(|a| running.iter().any(|p| p == *a)).map(|a| format!("quit {a} first")).collect();
+    Ok(Action {
+        target: format!("{FOLDER}{}", path.display()),
+        source: "folder".into(),
+        title: path.display().to_string(),
+        safety: info.safety.unwrap_or(Safety::Review),
+        bytes: node.size,
+        steps: vec![step],
+        warnings,
+        blockers,
+        quit_apps,
         suggested: false,
     })
 }

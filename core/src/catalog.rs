@@ -33,6 +33,8 @@ pub enum Fallback {
     DeleteDir,
     /// Move to the Trash (recoverable).
     Trash,
+    /// Delete files older than `older_than_days` inside the folder (logs).
+    DeleteOld,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -77,6 +79,8 @@ pub struct Rule {
     pub details: Vec<String>,
     /// Handled by code instead of paths (e.g. "tm-snapshots").
     pub special: Option<String>,
+    /// For `fallback = "delete-old"`: age in days.
+    pub older_than_days: Option<u32>,
     pub comes_back: String,
     pub explanation: String,
     pub leftover_explanation: Option<String>,

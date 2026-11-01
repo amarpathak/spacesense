@@ -119,6 +119,7 @@ pub fn describe(s: &Step) -> String {
         Step::DeleteContents { path } => format!("empty {}", path.display()),
         Step::DeleteDir { path } => format!("delete {}", path.display()),
         Step::Trash { path } => format!("move to Trash {}", path.display()),
+        Step::DeleteOld { path, days } => format!("delete files older than {days} days in {}", path.display()),
     }
 }
 
@@ -217,6 +218,34 @@ fn run_step(s: &Step, opts: &CleanOptions) -> StepResult {
                 let n = errors.len();
                 result(s, false, format!("{n} item(s) couldn't be removed, e.g. {}", errors[0]), before, after, None)
             }
+        }
+        Step::DeleteOld { path, days } => {
+            let real = match check(path) {
+                Ok(r) => r,
+                Err(e) => return skipped(s, &e),
+            };
+            let before = measure_bytes(&real);
+            let cutoff = std::time::SystemTime::now() - Duration::from_secs(*days as u64 * 86_400);
+            let (mut removed, mut failed) = (0u64, 0u64);
+            let mut stack = vec![real.clone()];
+            while let Some(d) = stack.pop() {
+                let Ok(rd) = std::fs::read_dir(&d) else { continue };
+                for e in rd.flatten() {
+                    let p = e.path();
+                    let Ok(m) = p.symlink_metadata() else { continue };
+                    if m.is_dir() {
+                        stack.push(p);
+                    } else if m.modified().map(|t| t < cutoff).unwrap_or(false) {
+                        match std::fs::remove_file(&p) {
+                            Ok(()) => removed += 1,
+                            Err(_) => failed += 1,
+                        }
+                    }
+                }
+            }
+            let after = measure_bytes(&real);
+            let msg = format!("deleted {removed} file(s) older than {days} days{}", if failed > 0 { format!(", {failed} couldn't be removed") } else { String::new() });
+            result(s, failed == 0, msg, before, after, None)
         }
         Step::Trash { path } => {
             let real = match check(path) {

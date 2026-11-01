@@ -162,6 +162,12 @@ pub fn explain(path: &Path, home: &Path) -> Explanation {
                 ex("Your files", Some(Safety::Review), "Your own files. Review before deleting; prefer moving to the Trash.", None)
             }
         }
+        [top, ..] if [".ssh", ".gnupg", ".aws", ".azure", ".kube", ".password-store", ".docker", ".gcloud"].contains(top) => ex(
+            "Keys and credentials",
+            Some(Safety::NeverAuto),
+            "SSH keys, signing keys or cloud credentials. Losing them can lock you out of servers and accounts. Don't delete.",
+            None,
+        ),
         [top, ..] if top.starts_with('.') => ex(
             "Tool data",
             Some(Safety::Review),
